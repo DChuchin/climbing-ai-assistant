@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Climbing Coach - Дмитрий</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card { @apply bg-white rounded-2xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl; }
+        .nav-btn { @apply px-4 py-2 rounded-xl font-medium transition-all duration-200; }
+        .nav-btn.active { @apply bg-white text-purple-600 shadow-md; }
+        .nav-btn:not(.active) { @apply text-white/80 hover:text-white hover:bg-white/10; }
+        .metric-card { @apply bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-2xl p-5; }
+        .stat-value { @apply text-3xl font-bold; }
+        .stat-label { @apply text-sm opacity-80; }
+        .markdown-content h1 { @apply text-2xl font-bold mb-4 text-gray-800; }
+        .markdown-content h2 { @apply text-xl font-semibold mb-3 mt-6 text-gray-700 border-b pb-2; }
+        .markdown-content h3 { @apply text-lg font-semibold mb-2 mt-4 text-gray-700; }
+        .markdown-content h4 { @apply text-base font-semibold mb-2 mt-3 text-gray-600; }
+        .markdown-content p { @apply mb-3 text-gray-600 leading-relaxed; }
+        .markdown-content ul { @apply mb-4 ml-5 list-disc text-gray-600; }
+        .markdown-content ol { @apply mb-4 ml-5 list-decimal text-gray-600; }
+        .markdown-content li { @apply mb-1; }
+        .markdown-content strong { @apply font-semibold text-gray-800; }
+        .markdown-content code { @apply bg-gray-100 px-2 py-0.5 rounded text-sm text-purple-600; }
+        .markdown-content pre { @apply bg-gray-900 text-gray-100 p-4 rounded-xl overflow-x-auto mb-4 text-sm; }
+        .markdown-content pre code { @apply bg-transparent text-gray-100 p-0; }
+        .markdown-content hr { @apply my-6 border-gray-200; }
+        .markdown-content table { @apply w-full mb-4 border-collapse; }
+        .markdown-content th { @apply bg-gray-100 text-left p-3 font-semibold text-gray-700 border-b; }
+        .markdown-content td { @apply p-3 border-b border-gray-100 text-gray-600; }
+        .markdown-content blockquote { @apply border-l-4 border-purple-400 pl-4 italic text-gray-600 my-4; }
+        .loading { @apply animate-pulse bg-gray-200 rounded; }
+        .section-hidden { display: none; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">🧗</span>
+                    </div>
+                    <div>
+                        <h1 class="text-white font-bold text-lg">Climbing Coach</h1>
+                        <p class="text-white/70 text-sm" id="athleteName">Загрузка...</p>
+                    </div>
+                </div>
+                <div class="text-right text-white/80 text-sm">
+                    <div id="currentDate"></div>
+                    <div id="cycleInfo" class="font-medium text-white"></div>
+                </div>
+            </div>
+            
+            <!-- Navigation -->
+            <nav class="flex gap-2 overflow-x-auto pb-2 -mb-2">
+                <button class="nav-btn active" data-section="dashboard">📊 Сегодня</button>
+                <button class="nav-btn" data-section="plan">📅 План</button>
+                <button class="nav-btn" data-section="progress">📈 Прогресс</button>
+                <button class="nav-btn" data-section="tests">🧪 Тесты</button>
+                <button class="nav-btn" data-section="nutrition">🥗 Питание</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-6">
+        
+        <!-- Dashboard Section -->
+        <section id="section-dashboard" class="fade-in">
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="metric-card">
+                    <div class="stat-value" id="currentGrade">-</div>
+                    <div class="stat-label">Текущий уровень</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="stat-value" id="hangTime">-</div>
+                    <div class="stat-label">Вис 20мм (сек)</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <div class="stat-value" id="pullupWeight">-</div>
+                    <div class="stat-label">Подтягивания +кг</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                    <div class="stat-value" id="currentWeek">-</div>
+                    <div class="stat-label">Неделя цикла</div>
+                </div>
+            </div>
+
+            <!-- Today's Training -->
+            <div class="card mb-6">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="text-2xl">🎯</span>
+                    <h2 class="text-xl font-bold text-gray-800">Сегодняшняя тренировка</h2>
+                </div>
+                <div id="todayTraining" class="markdown-content">
+                    <div class="loading h-6 w-3/4 mb-3"></div>
+                    <div class="loading h-4 w-full mb-2"></div>
+                    <div class="loading h-4 w-5/6 mb-2"></div>
+                    <div class="loading h-4 w-4/5"></div>
+                </div>
+            </div>
+
+            <!-- Recent Sessions -->
+            <div class="card mb-6">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="text-2xl">📝</span>
+                    <h2 class="text-xl font-bold text-gray-800">Последние тренировки</h2>
+                </div>
+                <div id="recentSessions" class="space-y-3">
+                    <div class="loading h-20 w-full rounded-xl"></div>
+                </div>
+            </div>
+
+            <!-- Priorities -->
+            <div class="card">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="text-2xl">🎯</span>
+                    <h2 class="text-xl font-bold text-gray-800">Приоритеты развития</h2>
+                </div>
+                <div id="priorities" class="grid md:grid-cols-3 gap-4">
+                    <div class="loading h-24 w-full rounded-xl"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Plan Section -->
+        <section id="section-plan" class="section-hidden">
+            <div class="card">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="text-2xl">📅</span>
+                    <h2 class="text-xl font-bold text-gray-800">Тренировочный план</h2>
+                </div>
+                <div id="planContent" class="markdown-content">
+                    <div class="text-center py-8 text-gray-500">Загрузка плана...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Progress Section -->
+        <section id="section-progress" class="section-hidden">
+            <div class="card">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="text-2xl">📈</span>
+                    <h2 class="text-xl font-bold text-gray-800">Журнал прогресса</h2>
+                </div>
+                <div id="progressContent" class="markdown-content">
+                    <div class="text-center py-8 text-gray-500">Загрузка прогресса...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tests Section -->
+        <section id="section-tests" class="section-hidden">
+            <div class="card mb-6">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="text-2xl">🧪</span>
+                    <h2 class="text-xl font-bold text-gray-800">Результаты тестирований</h2>
+                </div>
+                <div id="testsContent" class="markdown-content">
+                    <div class="text-center py-8 text-gray-500">Загрузка тестов...</div>
+                </div>
+            </div>
+            
+            <!-- Next Test -->
+            <div class="card bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">📆</span>
+                    </div>
+                    <div>
+                        <div class="text-sm text-purple-600 font-medium">Следующее тестирование</div>
+                        <div class="text-lg font-bold text-gray-800" id="nextTestDate">-</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Nutrition Section -->
+        <section id="section-nutrition" class="section-hidden">
+            <div class="card">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="text-2xl">🥗</span>
+                    <h2 class="text-xl font-bold text-gray-800">Питание и восстановление</h2>
+                </div>
+                <div id="nutritionContent" class="markdown-content">
+                    <div class="text-center py-8 text-gray-500">Загрузка рекомендаций...</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-6 text-gray-400 text-sm">
+        <p>Climbing Coach AI • Персональный тренер по болдерингу</p>
+    </footer>
+
+    <script>
+        // State
+        let currentState = null;
+        let trainingPlan = null;
+        let progressLog = null;
+        let nutritionRecovery = null;
+
+        // Day mapping for Russian
+        const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+        const dayTypes = {
+            0: { name: 'Полное восстановление', icon: '⚪', color: 'gray' },
+            1: { name: 'Сила пальцев + Кор', icon: '🔴', color: 'red' },
+            2: { name: 'Объемное лазание', icon: '🟢', color: 'green' },
+            3: { name: 'Активное восстановление', icon: '🟡', color: 'yellow' },
+            4: { name: 'Сила + Системборд', icon: '🔵', color: 'blue' },
+            5: { name: 'Техника + Проекты', icon: '🟣', color: 'purple' },
+            6: { name: 'Выносливость + Объем', icon: '🟠', color: 'orange' }
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            updateDate();
+            setupNavigation();
+            await loadAllData();
+            renderDashboard();
+        });
+
+        // Update current date
+        function updateDate() {
+            const now = new Date();
+            const options = { weekday: 'long', day: 'numeric', month: 'long' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('ru-RU', options);
+        }
+
+        // Navigation
+        function setupNavigation() {
+            const navButtons = document.querySelectorAll('.nav-btn');
+            navButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const section = btn.dataset.section;
+                    switchSection(section);
+                    
+                    // Update active state
+                    navButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
+            });
+        }
+
+        function switchSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('main > section').forEach(s => {
+                s.classList.add('section-hidden');
+            });
+            
+            // Show selected section
+            const section = document.getElementById(`section-${sectionId}`);
+            if (section) {
+                section.classList.remove('section-hidden');
+                section.classList.add('fade-in');
+            }
+
+            // Load content if needed
+            if (sectionId === 'plan' && trainingPlan) {
+                renderPlan();
+            } else if (sectionId === 'progress' && progressLog) {
+                renderProgress();
+            } else if (sectionId === 'tests' && progressLog) {
+                renderTests();
+            } else if (sectionId === 'nutrition' && nutritionRecovery) {
+                renderNutrition();
+            }
+        }
+
+        // Load all data
+        async function loadAllData() {
+            try {
+                const [stateRes, planRes, progressRes, nutritionRes] = await Promise.all([
+                    fetch('current_state.json'),
+                    fetch('training_plan.md'),
+                    fetch('progress_log.md'),
+                    fetch('nutrition_recovery.md')
+                ]);
+
+                currentState = await stateRes.json();
+                trainingPlan = await planRes.text();
+                progressLog = await progressRes.text();
+                nutritionRecovery = await nutritionRes.text();
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        // Render dashboard
+        function renderDashboard() {
+            if (!currentState) return;
+
+            // Athlete name
+            document.getElementById('athleteName').textContent = currentState.athlete.name;
+
+            // Metrics
+            document.getElementById('currentGrade').textContent = currentState.current_metrics.grade;
+            document.getElementById('hangTime').textContent = currentState.current_metrics.hangboard_20mm_max_hang_seconds || '-';
+            document.getElementById('pullupWeight').textContent = '+' + currentState.current_metrics.pullups_max_weight_kg;
+            document.getElementById('currentWeek').textContent = currentState.training_cycle.current_week || '1';
+
+            // Cycle info
+            document.getElementById('cycleInfo').textContent = `Мезоцикл ${currentState.training_cycle.mesocycle}: ${currentState.training_cycle.mesocycle_name.split(' - ')[1] || currentState.training_cycle.mesocycle_name}`;
+
+            // Today's training
+            renderTodayTraining();
+
+            // Recent sessions
+            renderRecentSessions();
+
+            // Priorities
+            renderPriorities();
+        }
+
+        // Get today's training from plan
+        function renderTodayTraining() {
+            const today = new Date();
+            const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+            const dayInfo = dayTypes[dayOfWeek];
+            
+            // Extract training section from plan based on day
+            let trainingContent = '';
+            
+            if (trainingPlan) {
+                // Find the relevant day section in the plan
+                const dayMarkers = ['ДЕНЬ 1', 'ДЕНЬ 2', 'ДЕНЬ 3', 'ДЕНЬ 4', 'ДЕНЬ 5', 'ДЕНЬ 6', 'ДЕНЬ 7'];
+                const dayNumber = dayOfWeek === 0 ? 7 : dayOfWeek;
+                const marker = dayMarkers[dayNumber - 1];
+                
+                const sections = trainingPlan.split(/####\s+/);
+                let foundSection = sections.find(s => s.includes(marker));
+                
+                if (foundSection) {
+                    // Get just this day's content
+                    const nextMarkerIndex = foundSection.indexOf('---');
+                    if (nextMarkerIndex > 0) {
+                        foundSection = foundSection.substring(0, nextMarkerIndex);
+                    }
+                    trainingContent = foundSection;
+                }
+            }
+
+            const html = `
+                <div class="flex items-center gap-3 mb-4 p-4 bg-gradient-to-r from-${dayInfo.color}-50 to-${dayInfo.color}-100 rounded-xl">
+                    <span class="text-3xl">${dayInfo.icon}</span>
+                    <div>
+                        <div class="text-sm text-${dayInfo.color}-600 font-medium">${dayNames[dayOfWeek]}</div>
+                        <div class="text-lg font-bold text-gray-800">${dayInfo.name}</div>
+                    </div>
+                </div>
+                <div class="training-details">
+                    ${trainingContent ? marked.parse(trainingContent) : '<p class="text-gray-500">План на сегодня загружается...</p>'}
+                </div>
+            `;
+
+            document.getElementById('todayTraining').innerHTML = html;
+        }
+
+        // Render recent sessions
+        function renderRecentSessions() {
+            if (!currentState || !currentState.recent_sessions) return;
+
+            const html = currentState.recent_sessions.map(session => {
+                const rpeColor = session.rpe >= 8 ? 'red' : session.rpe >= 6 ? 'yellow' : 'green';
+                return `
+                    <div class="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <div class="font-semibold text-gray-800">${session.type}</div>
+                                <div class="text-sm text-gray-500">${formatDate(session.date)}</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <span class="px-2 py-1 bg-${rpeColor}-100 text-${rpeColor}-700 rounded-lg text-sm font-medium">
+                                    RPE ${session.rpe}/10
+                                </span>
+                                <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium">
+                                    ${session.duration_min} мин
+                                </span>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 text-sm">${session.notes}</p>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('recentSessions').innerHTML = html;
+        }
+
+        // Render priorities
+        function renderPriorities() {
+            if (!currentState || !currentState.priorities) return;
+
+            const priorities = currentState.priorities;
+            const html = `
+                <div class="p-4 bg-red-50 rounded-xl border border-red-100">
+                    <div class="text-red-600 font-semibold mb-2">🎯 Критично</div>
+                    <ul class="text-gray-700 text-sm space-y-1">
+                        ${priorities.primary.map(p => `<li>• ${p}</li>`).join('')}
+                    </ul>
+                </div>
+                <div class="p-4 bg-yellow-50 rounded-xl border border-yellow-100">
+                    <div class="text-yellow-600 font-semibold mb-2">⚡ Важно</div>
+                    <ul class="text-gray-700 text-sm space-y-1">
+                        ${priorities.secondary.map(p => `<li>• ${p}</li>`).join('')}
+                    </ul>
+                </div>
+                <div class="p-4 bg-green-50 rounded-xl border border-green-100">
+                    <div class="text-green-600 font-semibold mb-2">✓ Поддержание</div>
+                    <ul class="text-gray-700 text-sm space-y-1">
+                        ${priorities.maintenance.map(p => `<li>• ${p}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+
+            document.getElementById('priorities').innerHTML = html;
+        }
+
+        // Render plan
+        function renderPlan() {
+            if (!trainingPlan) return;
+            document.getElementById('planContent').innerHTML = marked.parse(trainingPlan);
+        }
+
+        // Render progress
+        function renderProgress() {
+            if (!progressLog) return;
+            
+            // Extract training journal section
+            const journalSection = progressLog.split('## 🏃 ТРЕНИРОВКИ')[1] || progressLog;
+            document.getElementById('progressContent').innerHTML = marked.parse(journalSection);
+        }
+
+        // Render tests
+        function renderTests() {
+            if (!progressLog) return;
+
+            // Extract tests section
+            const testsSection = progressLog.split('## 🧪 ИСТОРИЯ ТЕСТИРОВАНИЙ')[1]?.split('## 📅')[0] || '';
+            const statsSection = progressLog.split('## 📊 СТАТИСТИКА')[1]?.split('## 💭')[0] || '';
+            const graphsSection = progressLog.split('## 📈 ГРАФИКИ ПРОГРЕССА')[1]?.split('##')[0] || '';
+
+            const content = `
+                ${testsSection}
+                
+                ${graphsSection}
+                
+                ${statsSection}
+            `;
+
+            document.getElementById('testsContent').innerHTML = marked.parse(content);
+            
+            // Update next test date
+            if (currentState?.training_cycle?.next_test_date) {
+                document.getElementById('nextTestDate').textContent = formatDate(currentState.training_cycle.next_test_date);
+            }
+        }
+
+        // Render nutrition
+        function renderNutrition() {
+            if (!nutritionRecovery) return;
+            document.getElementById('nutritionContent').innerHTML = marked.parse(nutritionRecovery);
+        }
+
+        // Utility: format date
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            return date.toLocaleDateString('ru-RU', options);
+        }
+    </script>
+</body>
+</html>
