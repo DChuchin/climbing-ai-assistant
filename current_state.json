@@ -1,0 +1,74 @@
+{
+  "athlete": {
+    "name": "Дмитрий",
+    "age": 39,
+    "weight_kg": 85,
+    "height_cm": 185,
+    "ape_index": 3
+  },
+  "current_metrics": {
+    "grade": "6C",
+    "hangboard_20mm_max_hang_seconds": 7,
+    "pullups_max_weight_kg": 40,
+    "pullups_bodyweight_reps": null,
+    "l_seat_hang_seconds": null,
+    "last_test_date": "2026-01-23"
+  },
+  "training_cycle": {
+    "mesocycle": "1",
+    "mesocycle_name": "Базовый период - Адаптация и укрепление пальцев",
+    "mesocycle_start_date": "2026-01-27",
+    "mesocycle_length_weeks": 8,
+    "current_week": 0,
+    "current_microcycle_day": 0,
+    "phase": "preparation",
+    "next_test_date": "2026-02-24"
+  },
+  "schedule": {
+    "pattern": "3+1+3+1",
+    "description": "ПН-ВТ работа, СР отдых, ЧТ-ПТ-СБ работа, ВС отдых",
+    "training_days": ["monday", "tuesday", "thursday", "friday", "saturday"],
+    "rest_days": ["wednesday", "sunday"]
+  },
+  "priorities": {
+    "primary": [
+      "Безопасное развитие силы пальцев",
+      "Укрепление кора"
+    ],
+    "secondary": [
+      "Техника на вертикали и мелких зацепках",
+      "Работа с ногами и балансом"
+    ],
+    "maintenance": [
+      "Поддержание силы верхнего плечевого пояса"
+    ]
+  },
+  "recent_sessions": [
+    {
+      "date": "2026-01-29",
+      "type": "День 4: Сила + Нависания",
+      "rpe": 8,
+      "duration_min": 105,
+      "sleep_quality": 8,
+      "notes": "ПРОРЫВ! 6C флеш на нависании! Подтягивания +35кг × 3 (2 подхода). Планка 30мм 15сек × 6. Ощущения 8/10!"
+    },
+    {
+      "date": "2026-01-28",
+      "type": "Активное восстановление",
+      "rpe": 3,
+      "duration_min": 30,
+      "sleep_quality": 8,
+      "notes": "Легкая растяжка + мобильность. Сон 7.5ч - улучшается! Готов к четвергу."
+    },
+    {
+      "date": "2026-01-27",
+      "type": "Облегченная тренировка",
+      "rpe": 6,
+      "duration_min": 80,
+      "sleep_quality": 7,
+      "notes": "13 проблем (12 флеш). Отличная техника! Легкая усталость + удовольствие. Идеальная нагрузка после стресса."
+    }
+  ],
+  "injuries_alerts": [],
+  "notes": "Неделя 1. ПРОГРЕСС: 6C флеш на нависании! Сила растет. Сон стабилизируется 7.5-8ч. Пятница: техника. Суббота: Tension или выносливость."
+}
