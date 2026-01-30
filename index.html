@@ -12,47 +12,228 @@
     <style>
         * { font-family: 'Inter', sans-serif; }
         .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .card { @apply bg-white rounded-2xl shadow-lg p-6 transition-all duration-300; }
-        .nav-btn { @apply px-4 py-2 rounded-xl font-medium transition-all duration-200; }
-        .nav-btn.active { @apply bg-white text-purple-600 shadow-md; }
-        .nav-btn:not(.active) { @apply text-white/80 hover:text-white hover:bg-white/10; }
-        .metric-card { @apply bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-2xl p-5; }
-        .stat-value { @apply text-3xl font-bold; }
-        .stat-label { @apply text-sm opacity-80; }
-        .input-field { @apply w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all; }
-        .btn-primary { @apply bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all duration-200 disabled:opacity-50; }
-        .btn-secondary { @apply bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-medium hover:bg-gray-200 transition-all; }
-        .btn-success { @apply bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-xl font-medium hover:shadow-lg transition-all; }
-        .btn-danger { @apply bg-red-100 text-red-600 px-3 py-2 rounded-lg font-medium hover:bg-red-200 transition-all; }
-        .exercise-card { @apply bg-gray-50 rounded-xl p-4 border border-gray-100; }
-        .problem-row { @apply flex flex-wrap gap-2 items-center p-3 bg-white rounded-xl border border-gray-100; }
-        .select-field { @apply px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none bg-white; }
-        .checkbox-btn { @apply w-10 h-10 rounded-lg border-2 flex items-center justify-center cursor-pointer transition-all; }
-        .checkbox-btn.checked { @apply bg-green-500 border-green-500 text-white; }
-        .checkbox-btn:not(.checked) { @apply border-gray-300 text-gray-300 hover:border-gray-400; }
-        .timer-display { @apply text-4xl font-mono font-bold text-center; }
-        .markdown-content h1 { @apply text-2xl font-bold mb-4 text-gray-800; }
-        .markdown-content h2 { @apply text-xl font-semibold mb-3 mt-6 text-gray-700 border-b pb-2; }
-        .markdown-content h3 { @apply text-lg font-semibold mb-2 mt-4 text-gray-700; }
-        .markdown-content h4 { @apply text-base font-semibold mb-2 mt-3 text-gray-600; }
-        .markdown-content p { @apply mb-3 text-gray-600 leading-relaxed; }
-        .markdown-content ul { @apply mb-4 ml-5 list-disc text-gray-600; }
-        .markdown-content ol { @apply mb-4 ml-5 list-decimal text-gray-600; }
-        .markdown-content li { @apply mb-1; }
-        .markdown-content strong { @apply font-semibold text-gray-800; }
-        .markdown-content code { @apply bg-gray-100 px-2 py-0.5 rounded text-sm text-purple-600; }
-        .markdown-content pre { @apply bg-gray-900 text-gray-100 p-4 rounded-xl overflow-x-auto mb-4 text-sm; }
-        .markdown-content pre code { @apply bg-transparent text-gray-100 p-0; }
-        .section-hidden { display: none; }
+        .section-hidden { display: none !important; }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .pulse { animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .toast { @apply fixed bottom-4 right-4 px-6 py-3 rounded-xl shadow-lg z-50 transition-all duration-300; }
-        .toast.success { @apply bg-green-500 text-white; }
-        .toast.error { @apply bg-red-500 text-white; }
-        .modal-overlay { @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50; }
-        .modal-content { @apply bg-white rounded-2xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto; }
+        
+        /* Modal - fixed positioning */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            max-width: 28rem;
+            width: calc(100% - 2rem);
+            max-height: 90vh;
+            overflow-y: auto;
+            margin: 1rem;
+        }
+        
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            z-index: 10000;
+            animation: slideIn 0.3s ease-out;
+        }
+        .toast.success { background: #22c55e; color: white; }
+        .toast.error { background: #ef4444; color: white; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        /* Markdown content styling */
+        .markdown-content h1 { font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem; color: #1f2937; }
+        .markdown-content h2 { font-size: 1.25rem; font-weight: 600; margin: 1.5rem 0 0.75rem; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem; }
+        .markdown-content h3 { font-size: 1.1rem; font-weight: 600; margin: 1rem 0 0.5rem; color: #374151; }
+        .markdown-content h4 { font-size: 1rem; font-weight: 600; margin: 0.75rem 0 0.5rem; color: #4b5563; }
+        .markdown-content p { margin-bottom: 0.75rem; color: #4b5563; line-height: 1.6; }
+        .markdown-content ul { margin-bottom: 1rem; margin-left: 1.25rem; list-style-type: disc; color: #4b5563; }
+        .markdown-content ol { margin-bottom: 1rem; margin-left: 1.25rem; list-style-type: decimal; color: #4b5563; }
+        .markdown-content li { margin-bottom: 0.25rem; }
+        .markdown-content strong { font-weight: 600; color: #1f2937; }
+        .markdown-content code { background: #f3f4f6; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.875rem; color: #7c3aed; }
+        .markdown-content pre { background: #111827; color: #f3f4f6; padding: 1rem; border-radius: 0.75rem; overflow-x: auto; margin-bottom: 1rem; font-size: 0.875rem; }
+        .markdown-content pre code { background: transparent; color: #f3f4f6; padding: 0; }
+        
+        /* Form elements */
+        .input-field {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: transparent;
+            box-shadow: 0 0 0 2px #a855f7;
+        }
+        .select-field {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            outline: none;
+            background: white;
+        }
+        .select-field:focus {
+            box-shadow: 0 0 0 2px #a855f7;
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(to right, #a855f7, #6366f1);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-secondary:hover { background: #e5e7eb; }
+        
+        .btn-success {
+            background: linear-gradient(to right, #22c55e, #10b981);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-success:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        
+        .btn-danger {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-danger:hover { background: #fecaca; }
+        
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+        
+        .exercise-card {
+            background: #f9fafb;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            border: 1px solid #f3f4f6;
+        }
+        
+        .problem-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+            padding: 0.75rem;
+            background: white;
+            border-radius: 0.75rem;
+            border: 1px solid #f3f4f6;
+        }
+        
+        /* Checkbox button */
+        .checkbox-btn {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 0.5rem;
+            border: 2px solid #d1d5db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            color: #d1d5db;
+        }
+        .checkbox-btn:hover { border-color: #9ca3af; }
+        .checkbox-btn.checked {
+            background: #22c55e;
+            border-color: #22c55e;
+            color: white;
+        }
+        
+        /* Metrics */
+        .metric-card {
+            background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+            color: white;
+            border-radius: 1rem;
+            padding: 1.25rem;
+        }
+        .stat-value { font-size: 1.875rem; font-weight: bold; }
+        .stat-label { font-size: 0.875rem; opacity: 0.8; }
+        
+        /* Navigation */
+        .nav-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .nav-btn.active {
+            background: white;
+            color: #7c3aed;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        .nav-btn:not(.active) {
+            background: transparent;
+            color: rgba(255,255,255,0.8);
+        }
+        .nav-btn:not(.active):hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        
+        /* Timer */
+        .timer-display {
+            font-size: 2.25rem;
+            font-family: monospace;
+            font-weight: bold;
+            text-align: center;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -405,7 +586,7 @@
 
     <!-- Plan Modal -->
     <div id="planModal" class="modal-overlay section-hidden">
-        <div class="modal-content max-w-2xl">
+        <div class="modal-content" style="max-width: 42rem;">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-xl font-bold text-gray-800">📋 План на сегодня</h3>
                 <button onclick="closePlanModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
@@ -509,13 +690,26 @@
         }
 
         async function loadMarkdownFiles() {
+            console.log('Loading markdown files...');
             try {
                 const [planRes, nutritionRes] = await Promise.all([
                     fetch('training_plan.md'),
                     fetch('nutrition_recovery.md')
                 ]);
-                trainingPlan = await planRes.text();
-                nutritionRecovery = await nutritionRes.text();
+                
+                if (planRes.ok) {
+                    trainingPlan = await planRes.text();
+                    console.log('Training plan loaded, length:', trainingPlan.length);
+                } else {
+                    console.error('Failed to load training_plan.md:', planRes.status);
+                }
+                
+                if (nutritionRes.ok) {
+                    nutritionRecovery = await nutritionRes.text();
+                    console.log('Nutrition loaded, length:', nutritionRecovery.length);
+                } else {
+                    console.error('Failed to load nutrition_recovery.md:', nutritionRes.status);
+                }
             } catch (e) {
                 console.error('Error loading MD files:', e);
             }
@@ -525,20 +719,41 @@
         function loadSettings() {
             const token = localStorage.getItem('github_token');
             const gistId = localStorage.getItem('gist_id');
+            console.log('loadSettings:', { hasToken: !!token, gistId });
             if (token) document.getElementById('githubToken').value = token;
             if (gistId) document.getElementById('gistId').value = gistId;
         }
 
-        function saveSettings() {
+        async function saveSettings() {
             const token = document.getElementById('githubToken').value.trim();
             const gistId = document.getElementById('gistId').value.trim();
             
-            if (token) localStorage.setItem('github_token', token);
-            if (gistId) localStorage.setItem('gist_id', gistId);
+            console.log('saveSettings called:', { hasToken: !!token, gistId });
+            
+            if (token) {
+                localStorage.setItem('github_token', token);
+                console.log('Token saved to localStorage');
+            }
+            if (gistId) {
+                localStorage.setItem('gist_id', gistId);
+                console.log('GistId saved to localStorage');
+            }
+            
+            // Verify save
+            console.log('Verification:', {
+                savedToken: !!localStorage.getItem('github_token'),
+                savedGistId: localStorage.getItem('gist_id')
+            });
             
             updateConnectionStatus();
             closeSettings();
             showToast('Настройки сохранены!', 'success');
+            
+            // Load data from Gist after saving settings
+            if (token && gistId) {
+                await loadGistData();
+                showToast('Данные загружены из Gist', 'success');
+            }
         }
 
         function openSettings() {
@@ -670,6 +885,8 @@
             const token = localStorage.getItem('github_token');
             const gistId = localStorage.getItem('gist_id');
             
+            console.log('Loading Gist data...', { hasToken: !!token, gistId });
+            
             if (!token || !gistId) return;
             
             try {
@@ -682,10 +899,18 @@
                     const content = data.files['training_data.json']?.content;
                     if (content) {
                         gistData = JSON.parse(content);
+                        console.log('Gist data loaded:', gistData);
                     }
+                } else {
+                    console.error('Failed to load gist:', res.status, await res.text());
                 }
             } catch (e) {
                 console.error('Error loading gist:', e);
+            }
+            
+            // Ensure sessions array exists
+            if (!gistData.sessions) {
+                gistData.sessions = [];
             }
         }
 
@@ -693,14 +918,31 @@
             const token = localStorage.getItem('github_token');
             const gistId = localStorage.getItem('gist_id');
             
+            console.log('Saving to Gist...', { hasToken: !!token, gistId });
+            
             if (!token || !gistId) {
                 showToast('Настройте подключение к Gist', 'error');
                 return false;
             }
             
+            // Ensure sessions array exists
+            if (!gistData.sessions) {
+                gistData.sessions = [];
+            }
+            
             try {
                 gistData.sessions.unshift(newSession);
                 gistData.lastUpdated = new Date().toISOString();
+                
+                const payload = {
+                    files: {
+                        'training_data.json': {
+                            content: JSON.stringify(gistData, null, 2)
+                        }
+                    }
+                };
+                
+                console.log('Sending payload:', payload);
                 
                 const res = await fetch(`https://api.github.com/gists/${gistId}`, {
                     method: 'PATCH',
@@ -708,18 +950,25 @@
                         'Authorization': `token ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        files: {
-                            'training_data.json': {
-                                content: JSON.stringify(gistData, null, 2)
-                            }
-                        }
-                    })
+                    body: JSON.stringify(payload)
                 });
                 
-                return res.ok;
+                if (res.ok) {
+                    console.log('Save successful!');
+                    return true;
+                } else {
+                    const errorText = await res.text();
+                    console.error('Save failed:', res.status, errorText);
+                    showToast(`Ошибка ${res.status}: ${errorText.slice(0, 100)}`, 'error');
+                    // Remove the session we just added since save failed
+                    gistData.sessions.shift();
+                    return false;
+                }
             } catch (e) {
                 console.error('Error saving to gist:', e);
+                showToast(`Ошибка сети: ${e.message}`, 'error');
+                // Remove the session we just added since save failed
+                gistData.sessions.shift();
                 return false;
             }
         }
@@ -1108,11 +1357,27 @@
 
         // ==================== PLAN MODAL ====================
         function loadTodayPlan() {
-            if (!trainingPlan) return;
+            console.log('loadTodayPlan called, trainingPlan loaded:', !!trainingPlan);
+            
+            const modal = document.getElementById('planModal');
+            
+            if (!trainingPlan) {
+                document.getElementById('todayPlanContent').innerHTML = '<p class="text-gray-500">План загружается... Попробуйте ещё раз.</p>';
+                modal.classList.remove('section-hidden');
+                // Try to load plan
+                loadMarkdownFiles().then(() => {
+                    if (trainingPlan) {
+                        loadTodayPlan();
+                    }
+                });
+                return;
+            }
             
             const dayOfWeek = new Date().getDay();
             const dayMarkers = ['ДЕНЬ 7', 'ДЕНЬ 1', 'ДЕНЬ 2', 'ДЕНЬ 3', 'ДЕНЬ 4', 'ДЕНЬ 5', 'ДЕНЬ 6'];
             const marker = dayMarkers[dayOfWeek];
+            
+            console.log('Looking for marker:', marker);
             
             const sections = trainingPlan.split(/####\s+/);
             let foundSection = sections.find(s => s.includes(marker));
@@ -1125,7 +1390,8 @@
                 document.getElementById('todayPlanContent').innerHTML = '<p>План на сегодня не найден</p>';
             }
             
-            document.getElementById('planModal').classList.remove('section-hidden');
+            modal.classList.remove('section-hidden');
+            console.log('Modal should be visible now');
         }
 
         function closePlanModal() {
