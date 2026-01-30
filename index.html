@@ -12,13 +12,25 @@
     <style>
         * { font-family: 'Inter', sans-serif; }
         .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .card { @apply bg-white rounded-2xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl; }
+        .card { @apply bg-white rounded-2xl shadow-lg p-6 transition-all duration-300; }
         .nav-btn { @apply px-4 py-2 rounded-xl font-medium transition-all duration-200; }
         .nav-btn.active { @apply bg-white text-purple-600 shadow-md; }
         .nav-btn:not(.active) { @apply text-white/80 hover:text-white hover:bg-white/10; }
         .metric-card { @apply bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-2xl p-5; }
         .stat-value { @apply text-3xl font-bold; }
         .stat-label { @apply text-sm opacity-80; }
+        .input-field { @apply w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all; }
+        .btn-primary { @apply bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all duration-200 disabled:opacity-50; }
+        .btn-secondary { @apply bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-medium hover:bg-gray-200 transition-all; }
+        .btn-success { @apply bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-xl font-medium hover:shadow-lg transition-all; }
+        .btn-danger { @apply bg-red-100 text-red-600 px-3 py-2 rounded-lg font-medium hover:bg-red-200 transition-all; }
+        .exercise-card { @apply bg-gray-50 rounded-xl p-4 border border-gray-100; }
+        .problem-row { @apply flex flex-wrap gap-2 items-center p-3 bg-white rounded-xl border border-gray-100; }
+        .select-field { @apply px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none bg-white; }
+        .checkbox-btn { @apply w-10 h-10 rounded-lg border-2 flex items-center justify-center cursor-pointer transition-all; }
+        .checkbox-btn.checked { @apply bg-green-500 border-green-500 text-white; }
+        .checkbox-btn:not(.checked) { @apply border-gray-300 text-gray-300 hover:border-gray-400; }
+        .timer-display { @apply text-4xl font-mono font-bold text-center; }
         .markdown-content h1 { @apply text-2xl font-bold mb-4 text-gray-800; }
         .markdown-content h2 { @apply text-xl font-semibold mb-3 mt-6 text-gray-700 border-b pb-2; }
         .markdown-content h3 { @apply text-lg font-semibold mb-2 mt-4 text-gray-700; }
@@ -31,20 +43,21 @@
         .markdown-content code { @apply bg-gray-100 px-2 py-0.5 rounded text-sm text-purple-600; }
         .markdown-content pre { @apply bg-gray-900 text-gray-100 p-4 rounded-xl overflow-x-auto mb-4 text-sm; }
         .markdown-content pre code { @apply bg-transparent text-gray-100 p-0; }
-        .markdown-content hr { @apply my-6 border-gray-200; }
-        .markdown-content table { @apply w-full mb-4 border-collapse; }
-        .markdown-content th { @apply bg-gray-100 text-left p-3 font-semibold text-gray-700 border-b; }
-        .markdown-content td { @apply p-3 border-b border-gray-100 text-gray-600; }
-        .markdown-content blockquote { @apply border-l-4 border-purple-400 pl-4 italic text-gray-600 my-4; }
-        .loading { @apply animate-pulse bg-gray-200 rounded; }
         .section-hidden { display: none; }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .toast { @apply fixed bottom-4 right-4 px-6 py-3 rounded-xl shadow-lg z-50 transition-all duration-300; }
+        .toast.success { @apply bg-green-500 text-white; }
+        .toast.error { @apply bg-red-500 text-white; }
+        .modal-overlay { @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50; }
+        .modal-content { @apply bg-white rounded-2xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <!-- Header -->
-    <header class="gradient-bg sticky top-0 z-50">
+    <header class="gradient-bg sticky top-0 z-40">
         <div class="max-w-6xl mx-auto px-4 py-4">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
@@ -53,21 +66,26 @@
                     </div>
                     <div>
                         <h1 class="text-white font-bold text-lg">Climbing Coach</h1>
-                        <p class="text-white/70 text-sm" id="athleteName">Загрузка...</p>
+                        <p class="text-white/70 text-sm" id="athleteName">Дмитрий</p>
                     </div>
                 </div>
-                <div class="text-right text-white/80 text-sm">
-                    <div id="currentDate"></div>
-                    <div id="cycleInfo" class="font-medium text-white"></div>
+                <div class="flex items-center gap-3">
+                    <div class="text-right text-white/80 text-sm hidden sm:block">
+                        <div id="currentDate"></div>
+                        <div id="cycleInfo" class="font-medium text-white"></div>
+                    </div>
+                    <button onclick="openSettings()" class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white hover:bg-white/30 transition-all">
+                        ⚙️
+                    </button>
                 </div>
             </div>
             
             <!-- Navigation -->
             <nav class="flex gap-2 overflow-x-auto pb-2 -mb-2">
-                <button class="nav-btn active" data-section="dashboard">📊 Сегодня</button>
+                <button class="nav-btn active" data-section="workout">🏋️ Тренировка</button>
+                <button class="nav-btn" data-section="dashboard">📊 Обзор</button>
+                <button class="nav-btn" data-section="history">📜 История</button>
                 <button class="nav-btn" data-section="plan">📅 План</button>
-                <button class="nav-btn" data-section="progress">📈 Прогресс</button>
-                <button class="nav-btn" data-section="tests">🧪 Тесты</button>
                 <button class="nav-btn" data-section="nutrition">🥗 Питание</button>
             </nav>
         </div>
@@ -76,39 +94,180 @@
     <!-- Main Content -->
     <main class="max-w-6xl mx-auto px-4 py-6">
         
-        <!-- Dashboard Section -->
-        <section id="section-dashboard" class="fade-in">
-            <!-- Quick Stats -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div class="metric-card">
-                    <div class="stat-value" id="currentGrade">-</div>
-                    <div class="stat-label">Текущий уровень</div>
+        <!-- Workout Section (Active Training) -->
+        <section id="section-workout" class="fade-in">
+            <!-- Connection Status -->
+            <div id="connectionStatus" class="mb-4 p-3 rounded-xl text-sm flex items-center gap-2 bg-yellow-50 text-yellow-700">
+                <span class="pulse">⚠️</span>
+                <span>Настройте подключение к GitHub Gist в настройках</span>
+                <button onclick="openSettings()" class="ml-auto btn-secondary text-xs">Настроить</button>
+            </div>
+
+            <!-- Today's Workout Header -->
+            <div class="card mb-6">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl" id="dayIcon">🎯</span>
+                        <div>
+                            <div class="text-sm text-gray-500" id="workoutDate">Загрузка...</div>
+                            <h2 class="text-xl font-bold text-gray-800" id="workoutTitle">День тренировки</h2>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="loadTodayPlan()" class="btn-secondary">📋 Показать план</button>
+                    </div>
                 </div>
-                <div class="metric-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                    <div class="stat-value" id="hangTime">-</div>
-                    <div class="stat-label">Вис 20мм (сек)</div>
-                </div>
-                <div class="metric-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                    <div class="stat-value" id="pullupWeight">-</div>
-                    <div class="stat-label">Подтягивания +кг</div>
-                </div>
-                <div class="metric-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-                    <div class="stat-value" id="currentWeek">-</div>
-                    <div class="stat-label">Неделя цикла</div>
+
+                <!-- Pre-workout metrics -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Самочувствие</label>
+                        <select id="preFeeling" class="select-field w-full">
+                            <option value="">—</option>
+                            <option value="5">5 - Плохо</option>
+                            <option value="6">6 - Нормально</option>
+                            <option value="7">7 - Хорошо</option>
+                            <option value="8">8 - Отлично</option>
+                            <option value="9">9 - Супер</option>
+                            <option value="10">10 - Идеально</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Сон (часов)</label>
+                        <input type="number" id="sleepHours" class="input-field" placeholder="7.5" step="0.5" min="4" max="12">
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Качество сна</label>
+                        <select id="sleepQuality" class="select-field w-full">
+                            <option value="">—</option>
+                            <option value="5">5 - Плохой</option>
+                            <option value="6">6 - Нормальный</option>
+                            <option value="7">7 - Хороший</option>
+                            <option value="8">8 - Отличный</option>
+                            <option value="9">9 - Идеальный</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Время начала</label>
+                        <input type="time" id="startTime" class="input-field">
+                    </div>
                 </div>
             </div>
 
-            <!-- Today's Training -->
+            <!-- Rest Timer -->
+            <div class="card mb-6 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        <span class="text-2xl">⏱️</span>
+                        <div>
+                            <div class="text-sm text-indigo-600 font-medium">Таймер отдыха</div>
+                            <div class="timer-display text-indigo-700" id="timerDisplay">4:00</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="setTimer(180)" class="btn-secondary">3 мин</button>
+                        <button onclick="setTimer(240)" class="btn-secondary">4 мин</button>
+                        <button onclick="setTimer(300)" class="btn-secondary">5 мин</button>
+                        <button onclick="toggleTimer()" id="timerBtn" class="btn-primary">▶ Старт</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Climbing Problems -->
+            <div class="card mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">🧗</span>
+                        <h3 class="text-lg font-bold text-gray-800">Болдеринг</h3>
+                    </div>
+                    <button onclick="addProblem()" class="btn-secondary">+ Проблема</button>
+                </div>
+                
+                <div id="problemsList" class="space-y-2">
+                    <!-- Problems will be added here -->
+                </div>
+                
+                <div class="mt-4 p-3 bg-gray-50 rounded-xl text-sm text-gray-600">
+                    <span id="problemsStats">Пролезено: 0 | Всего: 0 | Флеш: 0%</span>
+                </div>
+            </div>
+
+            <!-- Strength Exercises -->
+            <div class="card mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">💪</span>
+                        <h3 class="text-lg font-bold text-gray-800">Силовые упражнения</h3>
+                    </div>
+                    <button onclick="addExercise()" class="btn-secondary">+ Упражнение</button>
+                </div>
+                
+                <div id="exercisesList" class="space-y-3">
+                    <!-- Exercises will be added here -->
+                </div>
+            </div>
+
+            <!-- Workout Summary -->
             <div class="card mb-6">
                 <div class="flex items-center gap-2 mb-4">
-                    <span class="text-2xl">🎯</span>
-                    <h2 class="text-xl font-bold text-gray-800">Сегодняшняя тренировка</h2>
+                    <span class="text-2xl">📝</span>
+                    <h3 class="text-lg font-bold text-gray-800">Итоги тренировки</h3>
                 </div>
-                <div id="todayTraining" class="markdown-content">
-                    <div class="loading h-6 w-3/4 mb-3"></div>
-                    <div class="loading h-4 w-full mb-2"></div>
-                    <div class="loading h-4 w-5/6 mb-2"></div>
-                    <div class="loading h-4 w-4/5"></div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">RPE (нагрузка)</label>
+                        <select id="workoutRPE" class="select-field w-full">
+                            <option value="">—</option>
+                            <option value="5">5 - Легко</option>
+                            <option value="6">6 - Умеренно</option>
+                            <option value="7">7 - Средне</option>
+                            <option value="8">8 - Тяжело</option>
+                            <option value="9">9 - Очень тяжело</option>
+                            <option value="10">10 - Максимум</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Длительность (мин)</label>
+                        <input type="number" id="workoutDuration" class="input-field" placeholder="90">
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="text-sm text-gray-500 block mb-1">Заметки</label>
+                    <textarea id="workoutNotes" class="input-field h-24 resize-none" placeholder="Что получилось хорошо? Что было сложно? Технические находки..."></textarea>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button onclick="saveWorkout()" class="btn-success flex-1" id="saveBtn">
+                        💾 Сохранить тренировку
+                    </button>
+                    <button onclick="clearWorkout()" class="btn-danger">
+                        🗑️ Очистить
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboard Section -->
+        <section id="section-dashboard" class="section-hidden">
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="metric-card">
+                    <div class="stat-value" id="currentGrade">6C</div>
+                    <div class="stat-label">Текущий уровень</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="stat-value" id="hangTime">7</div>
+                    <div class="stat-label">Вис 20мм (сек)</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <div class="stat-value" id="pullupWeight">+40</div>
+                    <div class="stat-label">Подтягивания кг</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                    <div class="stat-value" id="totalSessions">0</div>
+                    <div class="stat-label">Тренировок</div>
                 </div>
             </div>
 
@@ -119,7 +278,7 @@
                     <h2 class="text-xl font-bold text-gray-800">Последние тренировки</h2>
                 </div>
                 <div id="recentSessions" class="space-y-3">
-                    <div class="loading h-20 w-full rounded-xl"></div>
+                    <p class="text-gray-500 text-center py-4">Загрузка...</p>
                 </div>
             </div>
 
@@ -129,8 +288,43 @@
                     <span class="text-2xl">🎯</span>
                     <h2 class="text-xl font-bold text-gray-800">Приоритеты развития</h2>
                 </div>
-                <div id="priorities" class="grid md:grid-cols-3 gap-4">
-                    <div class="loading h-24 w-full rounded-xl"></div>
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div class="p-4 bg-red-50 rounded-xl border border-red-100">
+                        <div class="text-red-600 font-semibold mb-2">🎯 Критично</div>
+                        <ul class="text-gray-700 text-sm space-y-1">
+                            <li>• Безопасное развитие силы пальцев</li>
+                            <li>• Укрепление кора</li>
+                        </ul>
+                    </div>
+                    <div class="p-4 bg-yellow-50 rounded-xl border border-yellow-100">
+                        <div class="text-yellow-600 font-semibold mb-2">⚡ Важно</div>
+                        <ul class="text-gray-700 text-sm space-y-1">
+                            <li>• Техника на вертикали</li>
+                            <li>• Работа с мелкими зацепками</li>
+                        </ul>
+                    </div>
+                    <div class="p-4 bg-green-50 rounded-xl border border-green-100">
+                        <div class="text-green-600 font-semibold mb-2">✓ Поддержание</div>
+                        <ul class="text-gray-700 text-sm space-y-1">
+                            <li>• Сила верхнего плечевого пояса</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- History Section -->
+        <section id="section-history" class="section-hidden">
+            <div class="card">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">📜</span>
+                        <h2 class="text-xl font-bold text-gray-800">История тренировок</h2>
+                    </div>
+                    <button onclick="loadHistory()" class="btn-secondary">🔄 Обновить</button>
+                </div>
+                <div id="historyList" class="space-y-4">
+                    <p class="text-gray-500 text-center py-8">Загрузка истории...</p>
                 </div>
             </div>
         </section>
@@ -143,46 +337,7 @@
                     <h2 class="text-xl font-bold text-gray-800">Тренировочный план</h2>
                 </div>
                 <div id="planContent" class="markdown-content">
-                    <div class="text-center py-8 text-gray-500">Загрузка плана...</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Progress Section -->
-        <section id="section-progress" class="section-hidden">
-            <div class="card">
-                <div class="flex items-center gap-2 mb-4">
-                    <span class="text-2xl">📈</span>
-                    <h2 class="text-xl font-bold text-gray-800">Журнал прогресса</h2>
-                </div>
-                <div id="progressContent" class="markdown-content">
-                    <div class="text-center py-8 text-gray-500">Загрузка прогресса...</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Tests Section -->
-        <section id="section-tests" class="section-hidden">
-            <div class="card mb-6">
-                <div class="flex items-center gap-2 mb-4">
-                    <span class="text-2xl">🧪</span>
-                    <h2 class="text-xl font-bold text-gray-800">Результаты тестирований</h2>
-                </div>
-                <div id="testsContent" class="markdown-content">
-                    <div class="text-center py-8 text-gray-500">Загрузка тестов...</div>
-                </div>
-            </div>
-            
-            <!-- Next Test -->
-            <div class="card bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100">
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                        <span class="text-2xl">📆</span>
-                    </div>
-                    <div>
-                        <div class="text-sm text-purple-600 font-medium">Следующее тестирование</div>
-                        <div class="text-lg font-bold text-gray-800" id="nextTestDate">-</div>
-                    </div>
+                    <p class="text-gray-500 text-center py-8">Загрузка плана...</p>
                 </div>
             </div>
         </section>
@@ -195,292 +350,823 @@
                     <h2 class="text-xl font-bold text-gray-800">Питание и восстановление</h2>
                 </div>
                 <div id="nutritionContent" class="markdown-content">
-                    <div class="text-center py-8 text-gray-500">Загрузка рекомендаций...</div>
+                    <p class="text-gray-500 text-center py-8">Загрузка...</p>
                 </div>
             </div>
         </section>
 
     </main>
 
-    <!-- Footer -->
-    <footer class="text-center py-6 text-gray-400 text-sm">
-        <p>Climbing Coach AI • Персональный тренер по болдерингу</p>
-    </footer>
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal-overlay section-hidden">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-800">⚙️ Настройки</h3>
+                <button onclick="closeSettings()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-sm text-gray-600 block mb-1">GitHub Personal Access Token</label>
+                    <input type="password" id="githubToken" class="input-field" placeholder="ghp_xxxxxxxxxxxx">
+                    <p class="text-xs text-gray-400 mt-1">Нужны права: gist (read/write)</p>
+                </div>
+                
+                <div>
+                    <label class="text-sm text-gray-600 block mb-1">Gist ID</label>
+                    <input type="text" id="gistId" class="input-field" placeholder="abc123...">
+                    <p class="text-xs text-gray-400 mt-1">ID секретного Gist для хранения данных</p>
+                </div>
+                
+                <div class="pt-2">
+                    <button onclick="createNewGist()" class="btn-secondary w-full mb-2">
+                        📝 Создать новый Gist
+                    </button>
+                    <button onclick="testConnection()" class="btn-primary w-full">
+                        🔗 Проверить подключение
+                    </button>
+                </div>
+                
+                <div id="connectionResult" class="hidden p-3 rounded-xl text-sm"></div>
+                
+                <hr class="my-4">
+                
+                <div>
+                    <button onclick="exportData()" class="btn-secondary w-full mb-2">
+                        📤 Экспорт данных (JSON)
+                    </button>
+                    <button onclick="saveSettings()" class="btn-success w-full">
+                        💾 Сохранить настройки
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plan Modal -->
+    <div id="planModal" class="modal-overlay section-hidden">
+        <div class="modal-content max-w-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-800">📋 План на сегодня</h3>
+                <button onclick="closePlanModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div id="todayPlanContent" class="markdown-content">
+                Загрузка...
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
 
     <script>
-        // State
-        let currentState = null;
+        // ==================== STATE ====================
+        let workoutData = {
+            problems: [],
+            exercises: []
+        };
+        
+        let timerInterval = null;
+        let timerSeconds = 240;
+        let timerRunning = false;
+        
         let trainingPlan = null;
-        let progressLog = null;
         let nutritionRecovery = null;
+        let gistData = { sessions: [] };
 
-        // Day mapping for Russian
-        const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
-        const dayTypes = {
-            0: { name: 'Полное восстановление', icon: '⚪', color: 'gray' },
-            1: { name: 'Сила пальцев + Кор', icon: '🔴', color: 'red' },
-            2: { name: 'Объемное лазание', icon: '🟢', color: 'green' },
-            3: { name: 'Активное восстановление', icon: '🟡', color: 'yellow' },
-            4: { name: 'Сила + Системборд', icon: '🔵', color: 'blue' },
-            5: { name: 'Техника + Проекты', icon: '🟣', color: 'purple' },
-            6: { name: 'Выносливость + Объем', icon: '🟠', color: 'orange' }
+        // Day configuration
+        const dayConfig = {
+            0: { name: 'Полное восстановление', icon: '⚪', type: 'rest' },
+            1: { name: 'Сила пальцев + Кор', icon: '🔴', type: 'strength' },
+            2: { name: 'Объемное лазание', icon: '🟢', type: 'volume' },
+            3: { name: 'Активное восстановление', icon: '🟡', type: 'recovery' },
+            4: { name: 'Сила + Системборд', icon: '🔵', type: 'power' },
+            5: { name: 'Техника + Проекты', icon: '🟣', type: 'technique' },
+            6: { name: 'Выносливость + Объем', icon: '🟠', type: 'endurance' }
         };
 
-        // Initialize
+        const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+        const grades = ['5A', '5B', '5C', '6A', '6A+', '6B', '6B+', '6C', '6C+', '7A', '7A+', '7B', '7B+', '7C'];
+
+        // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', async () => {
-            updateDate();
+            updateDateTime();
             setupNavigation();
-            await loadAllData();
-            renderDashboard();
+            loadSettings();
+            await loadMarkdownFiles();
+            await loadGistData();
+            updateConnectionStatus();
+            
+            // Add default exercises based on day
+            setupDefaultExercises();
         });
 
-        // Update current date
-        function updateDate() {
+        function updateDateTime() {
             const now = new Date();
-            const options = { weekday: 'long', day: 'numeric', month: 'long' };
-            document.getElementById('currentDate').textContent = now.toLocaleDateString('ru-RU', options);
+            const dayOfWeek = now.getDay();
+            const config = dayConfig[dayOfWeek];
+            
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('ru-RU', { 
+                weekday: 'long', day: 'numeric', month: 'long' 
+            });
+            document.getElementById('workoutDate').textContent = `${dayNames[dayOfWeek]}, ${now.toLocaleDateString('ru-RU')}`;
+            document.getElementById('workoutTitle').textContent = config.name;
+            document.getElementById('dayIcon').textContent = config.icon;
+            
+            // Set default start time
+            document.getElementById('startTime').value = now.toTimeString().slice(0, 5);
         }
 
-        // Navigation
         function setupNavigation() {
-            const navButtons = document.querySelectorAll('.nav-btn');
-            navButtons.forEach(btn => {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const section = btn.dataset.section;
                     switchSection(section);
-                    
-                    // Update active state
-                    navButtons.forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                 });
             });
         }
 
         function switchSection(sectionId) {
-            // Hide all sections
-            document.querySelectorAll('main > section').forEach(s => {
-                s.classList.add('section-hidden');
-            });
-            
-            // Show selected section
+            document.querySelectorAll('main > section').forEach(s => s.classList.add('section-hidden'));
             const section = document.getElementById(`section-${sectionId}`);
             if (section) {
                 section.classList.remove('section-hidden');
                 section.classList.add('fade-in');
             }
-
-            // Load content if needed
+            
+            // Load content
             if (sectionId === 'plan' && trainingPlan) {
-                renderPlan();
-            } else if (sectionId === 'progress' && progressLog) {
-                renderProgress();
-            } else if (sectionId === 'tests' && progressLog) {
-                renderTests();
+                document.getElementById('planContent').innerHTML = marked.parse(trainingPlan);
             } else if (sectionId === 'nutrition' && nutritionRecovery) {
-                renderNutrition();
+                document.getElementById('nutritionContent').innerHTML = marked.parse(nutritionRecovery);
+            } else if (sectionId === 'history') {
+                renderHistory();
+            } else if (sectionId === 'dashboard') {
+                renderDashboard();
             }
         }
 
-        // Load all data
-        async function loadAllData() {
+        async function loadMarkdownFiles() {
             try {
-                const [stateRes, planRes, progressRes, nutritionRes] = await Promise.all([
-                    fetch('current_state.json'),
+                const [planRes, nutritionRes] = await Promise.all([
                     fetch('training_plan.md'),
-                    fetch('progress_log.md'),
                     fetch('nutrition_recovery.md')
                 ]);
-
-                currentState = await stateRes.json();
                 trainingPlan = await planRes.text();
-                progressLog = await progressRes.text();
                 nutritionRecovery = await nutritionRes.text();
-            } catch (error) {
-                console.error('Error loading data:', error);
+            } catch (e) {
+                console.error('Error loading MD files:', e);
             }
         }
 
-        // Render dashboard
-        function renderDashboard() {
-            if (!currentState) return;
-
-            // Athlete name
-            document.getElementById('athleteName').textContent = currentState.athlete.name;
-
-            // Metrics
-            document.getElementById('currentGrade').textContent = currentState.current_metrics.grade;
-            document.getElementById('hangTime').textContent = currentState.current_metrics.hangboard_20mm_max_hang_seconds || '-';
-            document.getElementById('pullupWeight').textContent = '+' + currentState.current_metrics.pullups_max_weight_kg;
-            document.getElementById('currentWeek').textContent = currentState.training_cycle.current_week || '1';
-
-            // Cycle info
-            document.getElementById('cycleInfo').textContent = `Мезоцикл ${currentState.training_cycle.mesocycle}: ${currentState.training_cycle.mesocycle_name.split(' - ')[1] || currentState.training_cycle.mesocycle_name}`;
-
-            // Today's training
-            renderTodayTraining();
-
-            // Recent sessions
-            renderRecentSessions();
-
-            // Priorities
-            renderPriorities();
+        // ==================== SETTINGS ====================
+        function loadSettings() {
+            const token = localStorage.getItem('github_token');
+            const gistId = localStorage.getItem('gist_id');
+            if (token) document.getElementById('githubToken').value = token;
+            if (gistId) document.getElementById('gistId').value = gistId;
         }
 
-        // Get today's training from plan
-        function renderTodayTraining() {
-            const today = new Date();
-            const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-            const dayInfo = dayTypes[dayOfWeek];
+        function saveSettings() {
+            const token = document.getElementById('githubToken').value.trim();
+            const gistId = document.getElementById('gistId').value.trim();
             
-            // Extract training section from plan based on day
-            let trainingContent = '';
+            if (token) localStorage.setItem('github_token', token);
+            if (gistId) localStorage.setItem('gist_id', gistId);
             
-            if (trainingPlan) {
-                // Find the relevant day section in the plan
-                const dayMarkers = ['ДЕНЬ 1', 'ДЕНЬ 2', 'ДЕНЬ 3', 'ДЕНЬ 4', 'ДЕНЬ 5', 'ДЕНЬ 6', 'ДЕНЬ 7'];
-                const dayNumber = dayOfWeek === 0 ? 7 : dayOfWeek;
-                const marker = dayMarkers[dayNumber - 1];
+            updateConnectionStatus();
+            closeSettings();
+            showToast('Настройки сохранены!', 'success');
+        }
+
+        function openSettings() {
+            document.getElementById('settingsModal').classList.remove('section-hidden');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.add('section-hidden');
+        }
+
+        function updateConnectionStatus() {
+            const token = localStorage.getItem('github_token');
+            const gistId = localStorage.getItem('gist_id');
+            const statusEl = document.getElementById('connectionStatus');
+            
+            if (token && gistId) {
+                statusEl.className = 'mb-4 p-3 rounded-xl text-sm flex items-center gap-2 bg-green-50 text-green-700';
+                statusEl.innerHTML = `
+                    <span>✅</span>
+                    <span>Подключено к GitHub Gist</span>
+                    <span class="ml-auto text-xs text-green-500">${gistId.slice(0, 8)}...</span>
+                `;
+            } else {
+                statusEl.className = 'mb-4 p-3 rounded-xl text-sm flex items-center gap-2 bg-yellow-50 text-yellow-700';
+                statusEl.innerHTML = `
+                    <span class="pulse">⚠️</span>
+                    <span>Настройте подключение к GitHub Gist</span>
+                    <button onclick="openSettings()" class="ml-auto btn-secondary text-xs">Настроить</button>
+                `;
+            }
+        }
+
+        async function testConnection() {
+            const token = document.getElementById('githubToken').value.trim();
+            const gistId = document.getElementById('gistId').value.trim();
+            const resultEl = document.getElementById('connectionResult');
+            
+            if (!token) {
+                resultEl.className = 'p-3 rounded-xl text-sm bg-red-50 text-red-700';
+                resultEl.textContent = '❌ Введите токен';
+                resultEl.classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                resultEl.className = 'p-3 rounded-xl text-sm bg-blue-50 text-blue-700';
+                resultEl.textContent = '⏳ Проверка...';
+                resultEl.classList.remove('hidden');
                 
-                const sections = trainingPlan.split(/####\s+/);
-                let foundSection = sections.find(s => s.includes(marker));
-                
-                if (foundSection) {
-                    // Get just this day's content
-                    const nextMarkerIndex = foundSection.indexOf('---');
-                    if (nextMarkerIndex > 0) {
-                        foundSection = foundSection.substring(0, nextMarkerIndex);
+                if (gistId) {
+                    // Test existing gist
+                    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+                        headers: { 'Authorization': `token ${token}` }
+                    });
+                    
+                    if (res.ok) {
+                        const data = await res.json();
+                        resultEl.className = 'p-3 rounded-xl text-sm bg-green-50 text-green-700';
+                        resultEl.textContent = `✅ Подключено! Файлов в Gist: ${Object.keys(data.files).length}`;
+                    } else {
+                        throw new Error('Gist not found');
                     }
-                    trainingContent = foundSection;
+                } else {
+                    // Test token only
+                    const res = await fetch('https://api.github.com/user', {
+                        headers: { 'Authorization': `token ${token}` }
+                    });
+                    
+                    if (res.ok) {
+                        const user = await res.json();
+                        resultEl.className = 'p-3 rounded-xl text-sm bg-green-50 text-green-700';
+                        resultEl.textContent = `✅ Токен валидный! Пользователь: ${user.login}`;
+                    } else {
+                        throw new Error('Invalid token');
+                    }
                 }
+            } catch (e) {
+                resultEl.className = 'p-3 rounded-xl text-sm bg-red-50 text-red-700';
+                resultEl.textContent = `❌ Ошибка: ${e.message}`;
             }
-
-            const html = `
-                <div class="flex items-center gap-3 mb-4 p-4 bg-gradient-to-r from-${dayInfo.color}-50 to-${dayInfo.color}-100 rounded-xl">
-                    <span class="text-3xl">${dayInfo.icon}</span>
-                    <div>
-                        <div class="text-sm text-${dayInfo.color}-600 font-medium">${dayNames[dayOfWeek]}</div>
-                        <div class="text-lg font-bold text-gray-800">${dayInfo.name}</div>
-                    </div>
-                </div>
-                <div class="training-details">
-                    ${trainingContent ? marked.parse(trainingContent) : '<p class="text-gray-500">План на сегодня загружается...</p>'}
-                </div>
-            `;
-
-            document.getElementById('todayTraining').innerHTML = html;
         }
 
-        // Render recent sessions
-        function renderRecentSessions() {
-            if (!currentState || !currentState.recent_sessions) return;
+        async function createNewGist() {
+            const token = document.getElementById('githubToken').value.trim();
+            
+            if (!token) {
+                showToast('Сначала введите токен', 'error');
+                return;
+            }
+            
+            try {
+                const initialData = {
+                    sessions: [],
+                    created: new Date().toISOString(),
+                    version: '1.0'
+                };
+                
+                const res = await fetch('https://api.github.com/gists', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        description: 'Climbing Coach - Training Data',
+                        public: false,
+                        files: {
+                            'training_data.json': {
+                                content: JSON.stringify(initialData, null, 2)
+                            }
+                        }
+                    })
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('gistId').value = data.id;
+                    showToast(`Gist создан! ID: ${data.id}`, 'success');
+                } else {
+                    throw new Error('Failed to create gist');
+                }
+            } catch (e) {
+                showToast(`Ошибка: ${e.message}`, 'error');
+            }
+        }
 
-            const html = currentState.recent_sessions.map(session => {
-                const rpeColor = session.rpe >= 8 ? 'red' : session.rpe >= 6 ? 'yellow' : 'green';
-                return `
-                    <div class="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                        <div class="flex justify-between items-start mb-2">
-                            <div>
-                                <div class="font-semibold text-gray-800">${session.type}</div>
-                                <div class="text-sm text-gray-500">${formatDate(session.date)}</div>
-                            </div>
-                            <div class="flex gap-2">
-                                <span class="px-2 py-1 bg-${rpeColor}-100 text-${rpeColor}-700 rounded-lg text-sm font-medium">
-                                    RPE ${session.rpe}/10
-                                </span>
-                                <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium">
-                                    ${session.duration_min} мин
-                                </span>
-                            </div>
-                        </div>
-                        <p class="text-gray-600 text-sm">${session.notes}</p>
+        // ==================== GIST DATA ====================
+        async function loadGistData() {
+            const token = localStorage.getItem('github_token');
+            const gistId = localStorage.getItem('gist_id');
+            
+            if (!token || !gistId) return;
+            
+            try {
+                const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+                    headers: { 'Authorization': `token ${token}` }
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    const content = data.files['training_data.json']?.content;
+                    if (content) {
+                        gistData = JSON.parse(content);
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading gist:', e);
+            }
+        }
+
+        async function saveToGist(newSession) {
+            const token = localStorage.getItem('github_token');
+            const gistId = localStorage.getItem('gist_id');
+            
+            if (!token || !gistId) {
+                showToast('Настройте подключение к Gist', 'error');
+                return false;
+            }
+            
+            try {
+                gistData.sessions.unshift(newSession);
+                gistData.lastUpdated = new Date().toISOString();
+                
+                const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            'training_data.json': {
+                                content: JSON.stringify(gistData, null, 2)
+                            }
+                        }
+                    })
+                });
+                
+                return res.ok;
+            } catch (e) {
+                console.error('Error saving to gist:', e);
+                return false;
+            }
+        }
+
+        // ==================== PROBLEMS ====================
+        function addProblem(grade = '6B', attempts = 1, sent = false) {
+            const id = Date.now();
+            workoutData.problems.push({ id, grade, attempts, sent });
+            renderProblems();
+        }
+
+        function removeProblem(id) {
+            workoutData.problems = workoutData.problems.filter(p => p.id !== id);
+            renderProblems();
+        }
+
+        function updateProblem(id, field, value) {
+            const problem = workoutData.problems.find(p => p.id === id);
+            if (problem) {
+                problem[field] = value;
+                renderProblems();
+            }
+        }
+
+        function toggleProblemSent(id) {
+            const problem = workoutData.problems.find(p => p.id === id);
+            if (problem) {
+                problem.sent = !problem.sent;
+                renderProblems();
+            }
+        }
+
+        function renderProblems() {
+            const container = document.getElementById('problemsList');
+            
+            if (workoutData.problems.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-6 text-gray-400">
+                        <p>Нажмите "+ Проблема" чтобы добавить</p>
                     </div>
                 `;
-            }).join('');
-
-            document.getElementById('recentSessions').innerHTML = html;
-        }
-
-        // Render priorities
-        function renderPriorities() {
-            if (!currentState || !currentState.priorities) return;
-
-            const priorities = currentState.priorities;
-            const html = `
-                <div class="p-4 bg-red-50 rounded-xl border border-red-100">
-                    <div class="text-red-600 font-semibold mb-2">🎯 Критично</div>
-                    <ul class="text-gray-700 text-sm space-y-1">
-                        ${priorities.primary.map(p => `<li>• ${p}</li>`).join('')}
-                    </ul>
-                </div>
-                <div class="p-4 bg-yellow-50 rounded-xl border border-yellow-100">
-                    <div class="text-yellow-600 font-semibold mb-2">⚡ Важно</div>
-                    <ul class="text-gray-700 text-sm space-y-1">
-                        ${priorities.secondary.map(p => `<li>• ${p}</li>`).join('')}
-                    </ul>
-                </div>
-                <div class="p-4 bg-green-50 rounded-xl border border-green-100">
-                    <div class="text-green-600 font-semibold mb-2">✓ Поддержание</div>
-                    <ul class="text-gray-700 text-sm space-y-1">
-                        ${priorities.maintenance.map(p => `<li>• ${p}</li>`).join('')}
-                    </ul>
-                </div>
-            `;
-
-            document.getElementById('priorities').innerHTML = html;
-        }
-
-        // Render plan
-        function renderPlan() {
-            if (!trainingPlan) return;
-            document.getElementById('planContent').innerHTML = marked.parse(trainingPlan);
-        }
-
-        // Render progress
-        function renderProgress() {
-            if (!progressLog) return;
+            } else {
+                container.innerHTML = workoutData.problems.map((p, index) => `
+                    <div class="problem-row">
+                        <span class="text-gray-400 font-medium w-6">${index + 1}</span>
+                        <select onchange="updateProblem(${p.id}, 'grade', this.value)" class="select-field">
+                            ${grades.map(g => `<option value="${g}" ${p.grade === g ? 'selected' : ''}>${g}</option>`).join('')}
+                        </select>
+                        <select onchange="updateProblem(${p.id}, 'attempts', parseInt(this.value))" class="select-field">
+                            ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${p.attempts === n ? 'selected' : ''}>${n} поп.</option>`).join('')}
+                        </select>
+                        <button onclick="toggleProblemSent(${p.id})" class="checkbox-btn ${p.sent ? 'checked' : ''}">
+                            ${p.sent ? '✓' : ''}
+                        </button>
+                        <span class="text-sm ${p.sent ? 'text-green-600' : 'text-gray-400'}">
+                            ${p.sent ? (p.attempts === 1 ? 'Флеш!' : 'Пролез') : 'Не пролез'}
+                        </span>
+                        <button onclick="removeProblem(${p.id})" class="ml-auto text-gray-400 hover:text-red-500">✕</button>
+                    </div>
+                `).join('');
+            }
             
-            // Extract training journal section
-            const journalSection = progressLog.split('## 🏃 ТРЕНИРОВКИ')[1] || progressLog;
-            document.getElementById('progressContent').innerHTML = marked.parse(journalSection);
+            // Update stats
+            const total = workoutData.problems.length;
+            const sent = workoutData.problems.filter(p => p.sent).length;
+            const flash = workoutData.problems.filter(p => p.sent && p.attempts === 1).length;
+            const flashRate = total > 0 ? Math.round((flash / total) * 100) : 0;
+            
+            document.getElementById('problemsStats').textContent = 
+                `Пролезено: ${sent}/${total} | Флеш: ${flash} (${flashRate}%)`;
         }
 
-        // Render tests
-        function renderTests() {
-            if (!progressLog) return;
+        // ==================== EXERCISES ====================
+        function addExercise(name = '', sets = 3, reps = '', weight = '', time = '') {
+            const id = Date.now();
+            workoutData.exercises.push({ id, name, sets, reps, weight, time, completed: [] });
+            renderExercises();
+        }
 
-            // Extract tests section
-            const testsSection = progressLog.split('## 🧪 ИСТОРИЯ ТЕСТИРОВАНИЙ')[1]?.split('## 📅')[0] || '';
-            const statsSection = progressLog.split('## 📊 СТАТИСТИКА')[1]?.split('## 💭')[0] || '';
-            const graphsSection = progressLog.split('## 📈 ГРАФИКИ ПРОГРЕССА')[1]?.split('##')[0] || '';
+        function removeExercise(id) {
+            workoutData.exercises = workoutData.exercises.filter(e => e.id !== id);
+            renderExercises();
+        }
 
-            const content = `
-                ${testsSection}
-                
-                ${graphsSection}
-                
-                ${statsSection}
-            `;
-
-            document.getElementById('testsContent').innerHTML = marked.parse(content);
-            
-            // Update next test date
-            if (currentState?.training_cycle?.next_test_date) {
-                document.getElementById('nextTestDate').textContent = formatDate(currentState.training_cycle.next_test_date);
+        function updateExercise(id, field, value) {
+            const exercise = workoutData.exercises.find(e => e.id === id);
+            if (exercise) {
+                exercise[field] = value;
+                renderExercises();
             }
         }
 
-        // Render nutrition
-        function renderNutrition() {
-            if (!nutritionRecovery) return;
-            document.getElementById('nutritionContent').innerHTML = marked.parse(nutritionRecovery);
+        function toggleExerciseSet(id, setIndex) {
+            const exercise = workoutData.exercises.find(e => e.id === id);
+            if (exercise) {
+                if (!exercise.completed) exercise.completed = [];
+                const idx = exercise.completed.indexOf(setIndex);
+                if (idx > -1) {
+                    exercise.completed.splice(idx, 1);
+                } else {
+                    exercise.completed.push(setIndex);
+                }
+                renderExercises();
+            }
         }
 
-        // Utility: format date
-        function formatDate(dateStr) {
-            const date = new Date(dateStr);
-            const options = { day: 'numeric', month: 'long', year: 'numeric' };
-            return date.toLocaleDateString('ru-RU', options);
+        function renderExercises() {
+            const container = document.getElementById('exercisesList');
+            
+            if (workoutData.exercises.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-6 text-gray-400">
+                        <p>Нажмите "+ Упражнение" чтобы добавить</p>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = workoutData.exercises.map(ex => `
+                    <div class="exercise-card">
+                        <div class="flex flex-wrap gap-2 items-center mb-3">
+                            <input type="text" value="${ex.name}" 
+                                onchange="updateExercise(${ex.id}, 'name', this.value)"
+                                class="input-field flex-1 min-w-[150px]" placeholder="Название упражнения">
+                            <button onclick="removeExercise(${ex.id})" class="text-gray-400 hover:text-red-500 px-2">✕</button>
+                        </div>
+                        <div class="flex flex-wrap gap-2 items-center mb-3">
+                            <div class="flex items-center gap-1">
+                                <input type="number" value="${ex.sets}" 
+                                    onchange="updateExercise(${ex.id}, 'sets', parseInt(this.value))"
+                                    class="input-field w-16 text-center" min="1" max="10">
+                                <span class="text-gray-500 text-sm">подх.</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <input type="text" value="${ex.reps}" 
+                                    onchange="updateExercise(${ex.id}, 'reps', this.value)"
+                                    class="input-field w-16 text-center" placeholder="повт.">
+                                <span class="text-gray-500 text-sm">повт.</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <input type="text" value="${ex.weight}" 
+                                    onchange="updateExercise(${ex.id}, 'weight', this.value)"
+                                    class="input-field w-20 text-center" placeholder="+35кг">
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <input type="text" value="${ex.time}" 
+                                    onchange="updateExercise(${ex.id}, 'time', this.value)"
+                                    class="input-field w-16 text-center" placeholder="сек">
+                                <span class="text-gray-500 text-sm">сек</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            ${Array.from({length: ex.sets}, (_, i) => `
+                                <button onclick="toggleExerciseSet(${ex.id}, ${i})" 
+                                    class="checkbox-btn ${ex.completed?.includes(i) ? 'checked' : ''}">
+                                    ${ex.completed?.includes(i) ? '✓' : i + 1}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            }
         }
+
+        function setupDefaultExercises() {
+            const dayOfWeek = new Date().getDay();
+            
+            // Add common exercises based on day
+            if (dayOfWeek === 1) { // Monday - Strength
+                addExercise('Вис на планке 20мм', 5, '', '', '7');
+                addExercise('L-seat в висе', 3, '', '', '');
+            } else if (dayOfWeek === 4) { // Thursday - Power
+                addExercise('Подтягивания с весом', 4, '3', '+35кг', '');
+                addExercise('Блокировки', 3, '', '', '10');
+            }
+            
+            // Add a few default problems
+            addProblem('6A', 1, false);
+            addProblem('6B', 1, false);
+        }
+
+        // ==================== TIMER ====================
+        function setTimer(seconds) {
+            timerSeconds = seconds;
+            updateTimerDisplay();
+        }
+
+        function toggleTimer() {
+            if (timerRunning) {
+                stopTimer();
+            } else {
+                startTimer();
+            }
+        }
+
+        function startTimer() {
+            timerRunning = true;
+            document.getElementById('timerBtn').textContent = '⏸ Пауза';
+            document.getElementById('timerBtn').classList.add('bg-orange-500');
+            
+            timerInterval = setInterval(() => {
+                timerSeconds--;
+                updateTimerDisplay();
+                
+                if (timerSeconds <= 0) {
+                    stopTimer();
+                    playAlarm();
+                    showToast('⏰ Время отдыха закончилось!', 'success');
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            timerRunning = false;
+            clearInterval(timerInterval);
+            document.getElementById('timerBtn').textContent = '▶ Старт';
+            document.getElementById('timerBtn').classList.remove('bg-orange-500');
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(timerSeconds / 60);
+            const secs = timerSeconds % 60;
+            document.getElementById('timerDisplay').textContent = 
+                `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function playAlarm() {
+            // Simple beep using Web Audio API
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = 800;
+                gain.gain.value = 0.3;
+                osc.start();
+                setTimeout(() => osc.stop(), 500);
+            } catch (e) {}
+        }
+
+        // ==================== SAVE WORKOUT ====================
+        async function saveWorkout() {
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = '⏳ Сохранение...';
+            
+            const session = {
+                id: Date.now(),
+                date: new Date().toISOString().split('T')[0],
+                dayOfWeek: new Date().getDay(),
+                dayType: dayConfig[new Date().getDay()].name,
+                
+                preWorkout: {
+                    feeling: parseInt(document.getElementById('preFeeling').value) || null,
+                    sleepHours: parseFloat(document.getElementById('sleepHours').value) || null,
+                    sleepQuality: parseInt(document.getElementById('sleepQuality').value) || null,
+                    startTime: document.getElementById('startTime').value || null
+                },
+                
+                problems: workoutData.problems.map(p => ({
+                    grade: p.grade,
+                    attempts: p.attempts,
+                    sent: p.sent
+                })),
+                
+                exercises: workoutData.exercises.map(e => ({
+                    name: e.name,
+                    sets: e.sets,
+                    reps: e.reps,
+                    weight: e.weight,
+                    time: e.time,
+                    completedSets: e.completed?.length || 0
+                })),
+                
+                summary: {
+                    rpe: parseInt(document.getElementById('workoutRPE').value) || null,
+                    duration: parseInt(document.getElementById('workoutDuration').value) || null,
+                    notes: document.getElementById('workoutNotes').value.trim()
+                },
+                
+                stats: {
+                    totalProblems: workoutData.problems.length,
+                    sentProblems: workoutData.problems.filter(p => p.sent).length,
+                    flashCount: workoutData.problems.filter(p => p.sent && p.attempts === 1).length
+                }
+            };
+            
+            const success = await saveToGist(session);
+            
+            if (success) {
+                showToast('✅ Тренировка сохранена!', 'success');
+                // Don't clear, user might want to add more
+            } else {
+                showToast('❌ Ошибка сохранения', 'error');
+            }
+            
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Сохранить тренировку';
+        }
+
+        function clearWorkout() {
+            if (confirm('Очистить все данные тренировки?')) {
+                workoutData = { problems: [], exercises: [] };
+                document.getElementById('preFeeling').value = '';
+                document.getElementById('sleepHours').value = '';
+                document.getElementById('sleepQuality').value = '';
+                document.getElementById('workoutRPE').value = '';
+                document.getElementById('workoutDuration').value = '';
+                document.getElementById('workoutNotes').value = '';
+                renderProblems();
+                renderExercises();
+                showToast('Данные очищены', 'success');
+            }
+        }
+
+        // ==================== HISTORY & DASHBOARD ====================
+        function renderHistory() {
+            const container = document.getElementById('historyList');
+            
+            if (!gistData.sessions || gistData.sessions.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">Нет сохранённых тренировок</p>';
+                return;
+            }
+            
+            container.innerHTML = gistData.sessions.map(s => `
+                <div class="p-4 bg-gray-50 rounded-xl">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <div class="font-bold text-gray-800">${s.dayType || 'Тренировка'}</div>
+                            <div class="text-sm text-gray-500">${formatDate(s.date)}</div>
+                        </div>
+                        <div class="flex gap-2">
+                            ${s.summary?.rpe ? `<span class="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm">RPE ${s.summary.rpe}</span>` : ''}
+                            ${s.summary?.duration ? `<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm">${s.summary.duration} мин</span>` : ''}
+                        </div>
+                    </div>
+                    
+                    ${s.stats ? `
+                        <div class="text-sm text-gray-600 mb-2">
+                            🧗 Проблем: ${s.stats.sentProblems}/${s.stats.totalProblems} 
+                            (флеш: ${s.stats.flashCount})
+                        </div>
+                    ` : ''}
+                    
+                    ${s.summary?.notes ? `
+                        <div class="text-sm text-gray-600 bg-white p-2 rounded-lg">
+                            ${s.summary.notes}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderDashboard() {
+            // Update total sessions
+            document.getElementById('totalSessions').textContent = gistData.sessions?.length || 0;
+            
+            // Render recent sessions
+            const container = document.getElementById('recentSessions');
+            const recent = (gistData.sessions || []).slice(0, 3);
+            
+            if (recent.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">Нет тренировок</p>';
+            } else {
+                container.innerHTML = recent.map(s => `
+                    <div class="p-3 bg-gray-50 rounded-xl">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-medium text-gray-800">${s.dayType || 'Тренировка'}</div>
+                                <div class="text-xs text-gray-500">${formatDate(s.date)}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-medium text-purple-600">RPE ${s.summary?.rpe || '-'}</div>
+                                <div class="text-xs text-gray-500">${s.stats?.sentProblems || 0} проблем</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function loadHistory() {
+            await loadGistData();
+            renderHistory();
+            showToast('История обновлена', 'success');
+        }
+
+        // ==================== PLAN MODAL ====================
+        function loadTodayPlan() {
+            if (!trainingPlan) return;
+            
+            const dayOfWeek = new Date().getDay();
+            const dayMarkers = ['ДЕНЬ 7', 'ДЕНЬ 1', 'ДЕНЬ 2', 'ДЕНЬ 3', 'ДЕНЬ 4', 'ДЕНЬ 5', 'ДЕНЬ 6'];
+            const marker = dayMarkers[dayOfWeek];
+            
+            const sections = trainingPlan.split(/####\s+/);
+            let foundSection = sections.find(s => s.includes(marker));
+            
+            if (foundSection) {
+                const nextIdx = foundSection.indexOf('---');
+                if (nextIdx > 0) foundSection = foundSection.substring(0, nextIdx);
+                document.getElementById('todayPlanContent').innerHTML = marked.parse('#### ' + foundSection);
+            } else {
+                document.getElementById('todayPlanContent').innerHTML = '<p>План на сегодня не найден</p>';
+            }
+            
+            document.getElementById('planModal').classList.remove('section-hidden');
+        }
+
+        function closePlanModal() {
+            document.getElementById('planModal').classList.add('section-hidden');
+        }
+
+        // ==================== UTILITIES ====================
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('ru-RU', {
+                day: 'numeric', month: 'long', year: 'numeric'
+            });
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(gistData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `climbing_data_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Данные экспортированы', 'success');
+        }
+
+        // Close modals on outside click
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                e.target.classList.add('section-hidden');
+            }
+        });
     </script>
 </body>
 </html>
