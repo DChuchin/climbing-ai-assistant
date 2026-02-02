@@ -10,25 +10,41 @@
     "grade": "6C",
     "hangboard_20mm_max_hang_seconds": 7,
     "pullups_max_weight_kg": 40,
-    "pullups_bodyweight_reps": null,
-    "l_seat_hang_seconds": null,
-    "last_test_date": "2026-01-23"
+    "pullups_bodyweight_reps": 8,
+    "l_seat_hang_seconds": 5,
+    "last_test_date": "2026-01-27"
   },
   "training_cycle": {
     "mesocycle": "1",
     "mesocycle_name": "Базовый период - Адаптация и укрепление пальцев",
     "mesocycle_start_date": "2026-01-27",
     "mesocycle_length_weeks": 8,
-    "current_week": 0,
-    "current_microcycle_day": 0,
-    "phase": "preparation",
+    "current_week": 2,
+    "current_microcycle_day": 1,
+    "phase": "adaptation",
     "next_test_date": "2026-02-24"
   },
   "schedule": {
-    "pattern": "3+1+3+1",
-    "description": "ПН-ВТ работа, СР отдых, ЧТ-ПТ-СБ работа, ВС отдых",
-    "training_days": ["monday", "tuesday", "thursday", "friday", "saturday"],
-    "rest_days": ["wednesday", "sunday"]
+    "pattern": "2+1+2+2",
+    "active_scheme": "A",
+    "schemes": {
+      "A": {
+        "layout": "О-Т-Т-О-Т-Т-О",
+        "description": "ПН отдых, ВТ-СР работа, ЧТ отдых, ПТ-СБ работа, ВС отдых",
+        "training_days": ["tuesday", "wednesday", "friday", "saturday"],
+        "rest_days": ["monday", "thursday", "sunday"],
+        "best_for": "Тяжёлые понедельники на работе, нужен отдых в начале недели"
+      },
+      "B": {
+        "layout": "Т-Т-О-О-Т-Т-О",
+        "description": "ПН-ВТ работа, СР-ЧТ отдых, ПТ-СБ работа, ВС отдых",
+        "training_days": ["monday", "tuesday", "friday", "saturday"],
+        "rest_days": ["wednesday", "thursday", "sunday"],
+        "best_for": "Стандартная рабочая неделя, 2 дня отдыха в середине"
+      }
+    },
+    "current_training_days": ["tuesday", "wednesday", "friday", "saturday"],
+    "current_rest_days": ["monday", "thursday", "sunday"]
   },
   "priorities": {
     "primary": [
@@ -41,34 +57,52 @@
     ],
     "maintenance": [
       "Поддержание силы верхнего плечевого пояса"
+    ],
+    "aesthetic": [
+      "Объёмные плечи (жим + разведения + задняя дельта) — 1 раз/неделю"
     ]
   },
   "recent_sessions": [
+    {
+      "date": "2026-02-01",
+      "type": "День отдыха (воскресенье)",
+      "rpe": 3,
+      "duration_min": 0,
+      "sleep_quality": 5,
+      "notes": "Плохой сон 5/10. Ремонт дома. Сильное утомление к вечеру."
+    },
+    {
+      "date": "2026-01-31",
+      "type": "День отдыха (суббота)",
+      "rpe": 0,
+      "duration_min": 0,
+      "sleep_quality": 7,
+      "notes": "Хороший сон 8ч, но утомление за неделю. Ванна с магнием. Ранний сон."
+    },
+    {
+      "date": "2026-01-30",
+      "type": "День 5: Техника вертикаль (облегченная)",
+      "rpe": 7,
+      "duration_min": 120,
+      "sleep_quality": 7,
+      "notes": "10 проблем (9 флеш). 5C-6B уверенно. 6C не пролез. Энергия во время лазания, к концу усталость."
+    },
     {
       "date": "2026-01-29",
       "type": "День 4: Сила + Нависания",
       "rpe": 8,
       "duration_min": 105,
       "sleep_quality": 8,
-      "notes": "ПРОРЫВ! 6C флеш на нависании! Подтягивания +35кг × 3 (2 подхода). Планка 30мм 15сек × 6. Ощущения 8/10!"
-    },
-    {
-      "date": "2026-01-28",
-      "type": "Активное восстановление",
-      "rpe": 3,
-      "duration_min": 30,
-      "sleep_quality": 8,
-      "notes": "Легкая растяжка + мобильность. Сон 7.5ч - улучшается! Готов к четвергу."
-    },
-    {
-      "date": "2026-01-27",
-      "type": "Облегченная тренировка",
-      "rpe": 6,
-      "duration_min": 80,
-      "sleep_quality": 7,
-      "notes": "13 проблем (12 флеш). Отличная техника! Легкая усталость + удовольствие. Идеальная нагрузка после стресса."
+      "notes": "ПРОРЫВ! 6C флеш на нависании! Подтягивания +35кг × 3 (2 подхода). Планка 30мм 15сек × 6."
     }
   ],
+  "recovery_status": {
+    "overall": 5,
+    "upper_body": 6,
+    "fingers": 7,
+    "sleep_last_2_nights": "5/10, 5/10 - ПЛОХО",
+    "accumulated_fatigue": "HIGH"
+  },
   "injuries_alerts": [],
-  "notes": "Неделя 1. ПРОГРЕСС: 6C флеш на нависании! Сила растет. Сон стабилизируется 7.5-8ч. Пятница: техника. Суббота: Tension или выносливость."
+  "notes": "⚠️ ВНИМАНИЕ: 2 ночи плохого сна подряд (5/10). Накопленная усталость за неделю. Понедельник 2 февраля требует облегченной нагрузки или отдыха!"
 }
