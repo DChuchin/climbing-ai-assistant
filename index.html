@@ -294,9 +294,6 @@
                             <h2 class="text-xl font-bold text-gray-800" id="workoutTitle">День тренировки</h2>
                         </div>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="loadTodayPlan()" class="btn-secondary">📋 Показать план</button>
-                    </div>
                 </div>
 
                 <!-- Pre-workout metrics -->
@@ -336,13 +333,13 @@
             </div>
 
             <!-- Rest Timer -->
-            <div class="card mb-6 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100">
+            <div class="card mb-6" style="background: linear-gradient(to right, #eef2ff, #faf5ff); border: 1px solid #c7d2fe;">
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div class="flex items-center gap-4">
                         <span class="text-2xl">⏱️</span>
                         <div>
-                            <div class="text-sm text-indigo-600 font-medium">Таймер отдыха</div>
-                            <div class="timer-display text-indigo-700" id="timerDisplay">4:00</div>
+                            <div class="text-sm font-medium" style="color: #4f46e5;">Таймер отдыха</div>
+                            <div class="timer-display" style="color: #4338ca;" id="timerDisplay">4:00</div>
                         </div>
                     </div>
                     <div class="flex gap-2 flex-wrap">
@@ -354,12 +351,27 @@
                 </div>
             </div>
 
+            <!-- Today's Plan with Checkboxes -->
+            <div class="card mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">📋</span>
+                        <h3 class="text-lg font-bold text-gray-800">План на сегодня</h3>
+                    </div>
+                    <div id="planProgress" class="text-sm text-gray-500">0 / 0 выполнено</div>
+                </div>
+                
+                <div id="todayPlanBlocks" class="space-y-3">
+                    <p class="text-gray-500 text-center py-4">Загрузка плана...</p>
+                </div>
+            </div>
+
             <!-- Climbing Problems -->
             <div class="card mb-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
                         <span class="text-2xl">🧗</span>
-                        <h3 class="text-lg font-bold text-gray-800">Болдеринг</h3>
+                        <h3 class="text-lg font-bold text-gray-800">Болдеринг (результаты)</h3>
                     </div>
                     <button onclick="addProblem()" class="btn-secondary">+ Проблема</button>
                 </div>
@@ -373,18 +385,18 @@
                 </div>
             </div>
 
-            <!-- Strength Exercises -->
+            <!-- Additional Exercises (not in plan) -->
             <div class="card mb-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
-                        <span class="text-2xl">💪</span>
-                        <h3 class="text-lg font-bold text-gray-800">Силовые упражнения</h3>
+                        <span class="text-2xl">➕</span>
+                        <h3 class="text-lg font-bold text-gray-800">Дополнительно (вне плана)</h3>
                     </div>
                     <button onclick="addExercise()" class="btn-secondary">+ Упражнение</button>
                 </div>
                 
                 <div id="exercisesList" class="space-y-3">
-                    <!-- Exercises will be added here -->
+                    <p class="text-gray-400 text-sm text-center py-2">Добавьте упражнения, которых не было в плане</p>
                 </div>
             </div>
 
@@ -432,6 +444,21 @@
 
         <!-- Dashboard Section -->
         <section id="section-dashboard" class="section-hidden">
+            <!-- Cycle & Recovery Info -->
+            <div class="card mb-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <div class="text-sm text-gray-500">Мезоцикл</div>
+                        <div class="font-bold text-gray-800" id="mesocycleName">Загрузка...</div>
+                        <div class="text-sm text-gray-600" id="currentWeek">—</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-gray-500">Восстановление</div>
+                        <div class="text-2xl font-bold" id="recoveryStatus">—</div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Quick Stats -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div class="metric-card">
@@ -439,12 +466,12 @@
                     <div class="stat-label">Текущий уровень</div>
                 </div>
                 <div class="metric-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                    <div class="stat-value" id="hangTime">7</div>
-                    <div class="stat-label">Вис 20мм (сек)</div>
+                    <div class="stat-value" id="hangTime">7с</div>
+                    <div class="stat-label">Вис 20мм</div>
                 </div>
                 <div class="metric-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                    <div class="stat-value" id="pullupWeight">+40</div>
-                    <div class="stat-label">Подтягивания кг</div>
+                    <div class="stat-value" id="pullupWeight">+40кг</div>
+                    <div class="stat-label">Подтягивания</div>
                 </div>
                 <div class="metric-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
                     <div class="stat-value" id="totalSessions">0</div>
@@ -613,17 +640,19 @@
         
         let trainingPlan = null;
         let nutritionRecovery = null;
+        let currentState = null;  // Единственный источник истины для today_plan
         let gistData = { sessions: [] };
 
         // Day configuration
+        // Day config based on Схема Б (ПН-ВТ работа, СР-ЧТ отдых, ПТ-СБ работа, ВС отдых)
         const dayConfig = {
-            0: { name: 'Полное восстановление', icon: '⚪', type: 'rest' },
-            1: { name: 'Сила пальцев + Кор', icon: '🔴', type: 'strength' },
-            2: { name: 'Объемное лазание', icon: '🟢', type: 'volume' },
-            3: { name: 'Активное восстановление', icon: '🟡', type: 'recovery' },
-            4: { name: 'Сила + Системборд', icon: '🔵', type: 'power' },
-            5: { name: 'Техника + Проекты', icon: '🟣', type: 'technique' },
-            6: { name: 'Выносливость + Объем', icon: '🟠', type: 'endurance' }
+            0: { name: 'Полный отдых', icon: '⚪', type: 'rest' },
+            1: { name: 'Сила пальцев + Кор', icon: '💪', type: 'strength' },
+            2: { name: 'Техника + Объём', icon: '🎯', type: 'technique' },
+            3: { name: 'Активное восстановление', icon: '🧘', type: 'recovery' },
+            4: { name: 'Активное восстановление', icon: '🧘', type: 'recovery' },
+            5: { name: 'Интенсивность + Проекты', icon: '⚡', type: 'intensity' },
+            6: { name: 'Объём + Выносливость', icon: '📊', type: 'volume' }
         };
 
         const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
@@ -631,10 +660,17 @@
 
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', async () => {
-            updateDateTime();
             setupNavigation();
             loadSettings();
+            
+            // Load files first (includes current_state.json)
             await loadMarkdownFiles();
+            
+            // Now update UI with loaded data
+            updateDateTime();  // Uses currentState.today_plan if available
+            renderTodayPlanBlocks();  // Render plan from current_state.json
+            renderDashboard();  // Update dashboard with currentState data
+            
             await loadGistData();
             updateConnectionStatus();
             
@@ -645,14 +681,30 @@
         function updateDateTime() {
             const now = new Date();
             const dayOfWeek = now.getDay();
-            const config = dayConfig[dayOfWeek];
             
             document.getElementById('currentDate').textContent = now.toLocaleDateString('ru-RU', { 
                 weekday: 'long', day: 'numeric', month: 'long' 
             });
             document.getElementById('workoutDate').textContent = `${dayNames[dayOfWeek]}, ${now.toLocaleDateString('ru-RU')}`;
-            document.getElementById('workoutTitle').textContent = config.name;
-            document.getElementById('dayIcon').textContent = config.icon;
+            
+            // Use currentState.today_plan if available (единственный источник истины)
+            if (currentState?.today_plan) {
+                const plan = currentState.today_plan;
+                document.getElementById('workoutTitle').textContent = plan.type;
+                document.getElementById('dayIcon').textContent = plan.emoji || '📋';
+                
+                // Update cycle info
+                const cycle = currentState.training_cycle;
+                if (cycle) {
+                    document.getElementById('cycleInfo').textContent = 
+                        `Неделя ${cycle.current_week}/${cycle.mesocycle_length_weeks}`;
+                }
+            } else {
+                // Fallback to dayConfig
+                const config = dayConfig[dayOfWeek];
+                document.getElementById('workoutTitle').textContent = config.name;
+                document.getElementById('dayIcon').textContent = config.icon;
+            }
             
             // Set default start time
             document.getElementById('startTime').value = now.toTimeString().slice(0, 5);
@@ -690,11 +742,12 @@
         }
 
         async function loadMarkdownFiles() {
-            console.log('Loading markdown files...');
+            console.log('Loading files...');
             try {
-                const [planRes, nutritionRes] = await Promise.all([
+                const [planRes, nutritionRes, stateRes] = await Promise.all([
                     fetch('training_plan.md'),
-                    fetch('nutrition_recovery.md')
+                    fetch('nutrition_recovery.md'),
+                    fetch('current_state.json')
                 ]);
                 
                 if (planRes.ok) {
@@ -710,8 +763,15 @@
                 } else {
                     console.error('Failed to load nutrition_recovery.md:', nutritionRes.status);
                 }
+                
+                if (stateRes.ok) {
+                    currentState = await stateRes.json();
+                    console.log('Current state loaded:', currentState?.today_plan?.type);
+                } else {
+                    console.error('Failed to load current_state.json:', stateRes.status);
+                }
             } catch (e) {
-                console.error('Error loading MD files:', e);
+                console.error('Error loading files:', e);
             }
         }
 
@@ -1080,8 +1140,8 @@
             
             if (workoutData.exercises.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-6 text-gray-400">
-                        <p>Нажмите "+ Упражнение" чтобы добавить</p>
+                    <div class="text-center py-4 text-gray-400 text-sm">
+                        <p>Добавьте упражнения, которых не было в плане</p>
                     </div>
                 `;
             } else {
@@ -1131,21 +1191,134 @@
             }
         }
 
+        // Plan blocks state
+        let planBlocks = [];
+        
         function setupDefaultExercises() {
-            const dayOfWeek = new Date().getDay();
+            // Don't add default exercises anymore - plan is shown separately
+            // Just render the plan
+            renderTodayPlanBlocks();
+        }
+        
+        // Render today's plan from current_state.json (единственный источник истины)
+        function renderTodayPlanBlocks() {
+            const container = document.getElementById('todayPlanBlocks');
             
-            // Add common exercises based on day
-            if (dayOfWeek === 1) { // Monday - Strength
-                addExercise('Вис на планке 20мм', 5, '', '', '7');
-                addExercise('L-seat в висе', 3, '', '', '');
-            } else if (dayOfWeek === 4) { // Thursday - Power
-                addExercise('Подтягивания с весом', 4, '3', '+35кг', '');
-                addExercise('Блокировки', 3, '', '', '10');
+            if (!currentState) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">Загрузка плана...</p>';
+                setTimeout(renderTodayPlanBlocks, 500);
+                return;
             }
             
-            // Add a few default problems
-            addProblem('6A', 1, false);
-            addProblem('6B', 1, false);
+            const todayPlan = currentState.today_plan;
+            
+            if (!todayPlan || !todayPlan.blocks || todayPlan.blocks.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">План на сегодня не найден в current_state.json</p>';
+                return;
+            }
+            
+            console.log('Rendering today plan:', todayPlan.type, todayPlan.blocks.length, 'blocks');
+            
+            // Header with plan info
+            const headerHtml = `
+                <div class="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-3xl">${todayPlan.emoji || '📋'}</span>
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-800">${todayPlan.type}</h3>
+                            <p class="text-sm text-gray-600">
+                                ${todayPlan.duration_min} мин • RPE ${todayPlan.target_rpe} • ${todayPlan.location || 'скалодром'}
+                            </p>
+                        </div>
+                    </div>
+                    ${todayPlan.key_focus ? `<p class="text-sm text-blue-700 mt-2">🎯 <strong>Фокус:</strong> ${todayPlan.key_focus}</p>` : ''}
+                </div>
+            `;
+            
+            // Build plan blocks from current_state.json (preserve done/notes if already set)
+            if (planBlocks.length === 0) {
+                planBlocks = todayPlan.blocks.map((block, idx) => ({
+                    id: (idx + 1).toString(),
+                    title: `${block.name} (${block.duration_min} мин)`,
+                    content: block.exercises ? block.exercises.join('\n• ') : '',
+                    exercises: block.exercises || [],
+                    done: false,
+                    notes: ''
+                }));
+            }
+            
+            // Render blocks
+            const blocksHtml = planBlocks.map((block, idx) => `
+                <div class="p-4 rounded-xl border ${block.done ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}" id="planBlock${idx}">
+                    <div class="flex items-start gap-3">
+                        <button onclick="togglePlanBlock(${idx})" class="checkbox-btn flex-shrink-0 mt-1 ${block.done ? 'checked' : ''}">
+                            ${block.done ? '✓' : idx + 1}
+                        </button>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-gray-800 ${block.done ? 'line-through text-gray-500' : ''}">${block.title}</div>
+                            <ul class="text-sm text-gray-600 mt-2 space-y-1">
+                                ${block.exercises.map(ex => `<li class="flex items-start gap-2"><span class="text-gray-400">•</span>${ex}</li>`).join('')}
+                            </ul>
+                            <div class="mt-3">
+                                <input type="text" placeholder="Заметки к блоку..." 
+                                        class="input-field text-sm py-2"
+                                        onchange="updatePlanBlockNotes(${idx}, this.value)"
+                                        value="${block.notes || ''}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Evening priority reminder
+            const eveningHtml = todayPlan.evening_priority ? `
+                <div class="mt-4 p-3 bg-purple-50 rounded-xl text-sm">
+                    <span class="text-purple-700">🌙 <strong>Вечер:</strong> ${todayPlan.evening_priority}</span>
+                </div>
+            ` : '';
+            
+            // Combine header and blocks
+            container.innerHTML = headerHtml + blocksHtml + eveningHtml;
+            
+            updatePlanProgress();
+        }
+        
+        function togglePlanBlock(idx) {
+            if (planBlocks[idx]) {
+                planBlocks[idx].done = !planBlocks[idx].done;
+                
+                // Update just this block's UI without full re-render
+                const blockEl = document.getElementById(`planBlock${idx}`);
+                if (blockEl) {
+                    const block = planBlocks[idx];
+                    blockEl.className = `p-4 rounded-xl border ${block.done ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`;
+                    
+                    const btn = blockEl.querySelector('.checkbox-btn');
+                    if (btn) {
+                        btn.className = `checkbox-btn flex-shrink-0 mt-1 ${block.done ? 'checked' : ''}`;
+                        btn.textContent = block.done ? '✓' : idx + 1;
+                    }
+                    
+                    const titleEl = blockEl.querySelector('.font-semibold');
+                    if (titleEl) {
+                        titleEl.className = `font-semibold text-gray-800 ${block.done ? 'line-through text-gray-500' : ''}`;
+                    }
+                }
+                
+                updatePlanProgress();
+            }
+        }
+        
+        function updatePlanBlockNotes(idx, notes) {
+            if (planBlocks[idx]) {
+                planBlocks[idx].notes = notes;
+            }
+        }
+        
+        function updatePlanProgress() {
+            const done = planBlocks.filter(b => b.done).length;
+            const total = planBlocks.length;
+            document.getElementById('planProgress').textContent = `${done} / ${total} выполнено`;
         }
 
         // ==================== TIMER ====================
@@ -1227,13 +1400,22 @@
                     startTime: document.getElementById('startTime').value || null
                 },
                 
+                // Plan blocks completion
+                planBlocks: planBlocks.map(b => ({
+                    title: b.title,
+                    done: b.done,
+                    notes: b.notes || ''
+                })),
+                
+                // Climbing problems
                 problems: workoutData.problems.map(p => ({
                     grade: p.grade,
                     attempts: p.attempts,
                     sent: p.sent
                 })),
                 
-                exercises: workoutData.exercises.map(e => ({
+                // Additional exercises (not in plan)
+                additionalExercises: workoutData.exercises.map(e => ({
                     name: e.name,
                     sets: e.sets,
                     reps: e.reps,
@@ -1249,6 +1431,8 @@
                 },
                 
                 stats: {
+                    planBlocksTotal: planBlocks.length,
+                    planBlocksDone: planBlocks.filter(b => b.done).length,
                     totalProblems: workoutData.problems.length,
                     sentProblems: workoutData.problems.filter(p => p.sent).length,
                     flashCount: workoutData.problems.filter(p => p.sent && p.attempts === 1).length
@@ -1271,6 +1455,11 @@
         function clearWorkout() {
             if (confirm('Очистить все данные тренировки?')) {
                 workoutData = { problems: [], exercises: [] };
+                // Reset plan blocks
+                planBlocks.forEach(b => {
+                    b.done = false;
+                    b.notes = '';
+                });
                 document.getElementById('preFeeling').value = '';
                 document.getElementById('sleepHours').value = '';
                 document.getElementById('sleepQuality').value = '';
@@ -1279,6 +1468,7 @@
                 document.getElementById('workoutNotes').value = '';
                 renderProblems();
                 renderExercises();
+                renderTodayPlanBlocks();
                 showToast('Данные очищены', 'success');
             }
         }
@@ -1292,23 +1482,34 @@
                 return;
             }
             
-            container.innerHTML = gistData.sessions.map(s => `
+            container.innerHTML = gistData.sessions.map((s, index) => `
                 <div class="p-4 bg-gray-50 rounded-xl">
                     <div class="flex justify-between items-start mb-2">
                         <div>
                             <div class="font-bold text-gray-800">${s.dayType || 'Тренировка'}</div>
                             <div class="text-sm text-gray-500">${formatDate(s.date)}</div>
                         </div>
-                        <div class="flex gap-2">
+                        <div class="flex gap-2 items-center">
                             ${s.summary?.rpe ? `<span class="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm">RPE ${s.summary.rpe}</span>` : ''}
                             ${s.summary?.duration ? `<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm">${s.summary.duration} мин</span>` : ''}
+                            <button onclick="deleteSession(${index})" class="ml-2 text-gray-400 hover:text-red-500 p-1" title="Удалить">
+                                🗑️
+                            </button>
                         </div>
                     </div>
                     
-                    ${s.stats ? `
-                        <div class="text-sm text-gray-600 mb-2">
-                            🧗 Проблем: ${s.stats.sentProblems}/${s.stats.totalProblems} 
-                            (флеш: ${s.stats.flashCount})
+                    <div class="flex flex-wrap gap-2 text-sm text-gray-600 mb-2">
+                        ${s.stats?.planBlocksTotal ? `
+                            <span>📋 План: ${s.stats.planBlocksDone}/${s.stats.planBlocksTotal}</span>
+                        ` : ''}
+                        ${s.stats?.totalProblems ? `
+                            <span>🧗 Проблем: ${s.stats.sentProblems}/${s.stats.totalProblems} (флеш: ${s.stats.flashCount})</span>
+                        ` : ''}
+                    </div>
+                    
+                    ${s.planBlocks?.length ? `
+                        <div class="text-xs text-gray-500 mb-2">
+                            ${s.planBlocks.filter(b => b.done).map(b => `<span class="inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded mr-1 mb-1">✓ ${b.title.substring(0, 20)}</span>`).join('')}
                         </div>
                     ` : ''}
                     
@@ -1320,10 +1521,89 @@
                 </div>
             `).join('');
         }
+        
+        async function deleteSession(index) {
+            if (!confirm('Удалить эту тренировку?')) return;
+            
+            const token = localStorage.getItem('github_token');
+            const gistId = localStorage.getItem('gist_id');
+            
+            if (!token || !gistId) {
+                showToast('Нет подключения к Gist', 'error');
+                return;
+            }
+            
+            // Remove from local array
+            gistData.sessions.splice(index, 1);
+            gistData.lastUpdated = new Date().toISOString();
+            
+            try {
+                const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            'training_data.json': {
+                                content: JSON.stringify(gistData, null, 2)
+                            }
+                        }
+                    })
+                });
+                
+                if (res.ok) {
+                    showToast('Тренировка удалена', 'success');
+                    renderHistory();
+                    renderDashboard();
+                } else {
+                    showToast('Ошибка удаления', 'error');
+                    // Reload data to restore
+                    await loadGistData();
+                    renderHistory();
+                }
+            } catch (e) {
+                showToast('Ошибка сети', 'error');
+                await loadGistData();
+                renderHistory();
+            }
+        }
 
         function renderDashboard() {
             // Update total sessions
             document.getElementById('totalSessions').textContent = gistData.sessions?.length || 0;
+            
+            // Update metrics from currentState if available
+            if (currentState) {
+                const metrics = currentState.current_metrics;
+                const cycle = currentState.training_cycle;
+                const recovery = currentState.recovery_status;
+                
+                // Update quick stats
+                if (metrics) {
+                    document.getElementById('currentGrade').textContent = metrics.grade || '?';
+                    document.getElementById('hangTime').textContent = `${metrics.hangboard_20mm_max_hang_seconds || 0}с`;
+                    document.getElementById('pullupWeight').textContent = `+${metrics.pullups_max_weight_kg || 0}кг`;
+                }
+                
+                // Update cycle info
+                if (cycle) {
+                    document.getElementById('currentWeek').textContent = 
+                        `Неделя ${cycle.current_week} из ${cycle.mesocycle_length_weeks} • Фаза: ${cycle.phase}`;
+                    document.getElementById('mesocycleName').textContent = 
+                        cycle.mesocycle_name || `Мезоцикл ${cycle.mesocycle}`;
+                }
+                
+                // Show recovery status with color coding
+                if (recovery) {
+                    const level = recovery.overall;
+                    const colorClass = level >= 7 ? 'text-green-600' : level >= 5 ? 'text-yellow-600' : 'text-red-600';
+                    const fatigueIcon = recovery.accumulated_fatigue === 'HIGH' ? ' ⚠️' : '';
+                    document.getElementById('recoveryStatus').innerHTML = 
+                        `<span class="${colorClass}">${level}/10${fatigueIcon}</span>`;
+                }
+            }
             
             // Render recent sessions
             const container = document.getElementById('recentSessions');
@@ -1357,41 +1637,59 @@
 
         // ==================== PLAN MODAL ====================
         function loadTodayPlan() {
-            console.log('loadTodayPlan called, trainingPlan loaded:', !!trainingPlan);
+            console.log('loadTodayPlan called, currentState loaded:', !!currentState);
             
             const modal = document.getElementById('planModal');
+            const contentEl = document.getElementById('todayPlanContent');
             
-            if (!trainingPlan) {
-                document.getElementById('todayPlanContent').innerHTML = '<p class="text-gray-500">План загружается... Попробуйте ещё раз.</p>';
+            if (!currentState || !currentState.today_plan) {
+                contentEl.innerHTML = '<p class="text-gray-500">План загружается... Попробуйте ещё раз.</p>';
                 modal.classList.remove('section-hidden');
-                // Try to load plan
                 loadMarkdownFiles().then(() => {
-                    if (trainingPlan) {
+                    if (currentState?.today_plan) {
                         loadTodayPlan();
                     }
                 });
                 return;
             }
             
-            const dayOfWeek = new Date().getDay();
-            const dayMarkers = ['ДЕНЬ 7', 'ДЕНЬ 1', 'ДЕНЬ 2', 'ДЕНЬ 3', 'ДЕНЬ 4', 'ДЕНЬ 5', 'ДЕНЬ 6'];
-            const marker = dayMarkers[dayOfWeek];
+            const plan = currentState.today_plan;
             
-            console.log('Looking for marker:', marker);
+            // Render full plan in modal
+            let html = `
+                <div class="mb-4">
+                    <h3 class="text-xl font-bold flex items-center gap-2">
+                        <span>${plan.emoji || '📋'}</span>
+                        ${plan.type}
+                    </h3>
+                    <p class="text-sm text-gray-600 mt-1">
+                        ${plan.duration_min} мин • RPE ${plan.target_rpe} • ${plan.location || 'скалодром'}
+                    </p>
+                    ${plan.key_focus ? `<p class="text-blue-600 mt-2">🎯 ${plan.key_focus}</p>` : ''}
+                </div>
+            `;
             
-            const sections = trainingPlan.split(/####\s+/);
-            let foundSection = sections.find(s => s.includes(marker));
-            
-            if (foundSection) {
-                const nextIdx = foundSection.indexOf('---');
-                if (nextIdx > 0) foundSection = foundSection.substring(0, nextIdx);
-                document.getElementById('todayPlanContent').innerHTML = marked.parse('#### ' + foundSection);
-            } else {
-                document.getElementById('todayPlanContent').innerHTML = '<p>План на сегодня не найден</p>';
+            if (plan.blocks && plan.blocks.length > 0) {
+                html += '<div class="space-y-4">';
+                plan.blocks.forEach((block, idx) => {
+                    html += `
+                        <div class="p-3 bg-gray-50 rounded-xl">
+                            <h4 class="font-semibold">${idx + 1}. ${block.name} (${block.duration_min} мин)</h4>
+                            <ul class="mt-2 text-sm text-gray-700 space-y-1">
+                                ${(block.exercises || []).map(ex => `<li>• ${ex}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                });
+                html += '</div>';
             }
             
+            if (plan.evening_priority) {
+                html += `<div class="mt-4 p-3 bg-purple-50 rounded-xl text-purple-700">🌙 <strong>Вечер:</strong> ${plan.evening_priority}</div>`;
+            }
+            
+            contentEl.innerHTML = html;
             modal.classList.remove('section-hidden');
-            console.log('Modal should be visible now');
         }
 
         function closePlanModal() {
