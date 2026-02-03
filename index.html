@@ -656,7 +656,15 @@
         };
 
         const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+        const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayLabels = {
+            monday: 'ПН', tuesday: 'ВТ', wednesday: 'СР', 
+            thursday: 'ЧТ', friday: 'ПТ', saturday: 'СБ', sunday: 'ВС'
+        };
         const grades = ['5A', '5B', '5C', '6A', '6A+', '6B', '6B+', '6C', '6C+', '7A', '7A+', '7B', '7B+', '7C'];
+        
+        // Currently selected day for viewing (null = today)
+        let selectedDayKey = null;
 
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', async () => {
@@ -681,17 +689,19 @@
         function updateDateTime() {
             const now = new Date();
             const dayOfWeek = now.getDay();
+            const todayDayKey = dayKeys[dayOfWeek];
             
             document.getElementById('currentDate').textContent = now.toLocaleDateString('ru-RU', { 
                 weekday: 'long', day: 'numeric', month: 'long' 
             });
-            document.getElementById('workoutDate').textContent = `${dayNames[dayOfWeek]}, ${now.toLocaleDateString('ru-RU')}`;
             
-            // Use currentState.today_plan if available (единственный источник истины)
-            if (currentState?.today_plan) {
-                const plan = currentState.today_plan;
+            // Use week_plan if available (единственный источник истины)
+            const weekPlan = currentState?.week_plan;
+            if (weekPlan?.days?.[todayDayKey]) {
+                const plan = weekPlan.days[todayDayKey];
                 document.getElementById('workoutTitle').textContent = plan.type;
                 document.getElementById('dayIcon').textContent = plan.emoji || '📋';
+                document.getElementById('workoutDate').textContent = plan.date || `${dayNames[dayOfWeek]}, ${now.toLocaleDateString('ru-RU')}`;
                 
                 // Update cycle info
                 const cycle = currentState.training_cycle;
@@ -704,6 +714,7 @@
                 const config = dayConfig[dayOfWeek];
                 document.getElementById('workoutTitle').textContent = config.name;
                 document.getElementById('dayIcon').textContent = config.icon;
+                document.getElementById('workoutDate').textContent = `${dayNames[dayOfWeek]}, ${now.toLocaleDateString('ru-RU')}`;
             }
             
             // Set default start time
@@ -1200,7 +1211,30 @@
             renderTodayPlanBlocks();
         }
         
-        // Render today's plan from current_state.json (единственный источник истины)
+        function getCurrentDayKey() {
+            if (selectedDayKey) return selectedDayKey;
+            return dayKeys[new Date().getDay()];
+        }
+        
+        function selectDay(dayKey) {
+            selectedDayKey = dayKey;
+            planBlocks = []; // Reset blocks when changing day
+            renderTodayPlanBlocks();
+            updateWorkoutHeader();
+        }
+        
+        function updateWorkoutHeader() {
+            const dayKey = getCurrentDayKey();
+            const weekPlan = currentState?.week_plan;
+            if (!weekPlan?.days?.[dayKey]) return;
+            
+            const dayPlan = weekPlan.days[dayKey];
+            document.getElementById('workoutTitle').textContent = dayPlan.type;
+            document.getElementById('dayIcon').textContent = dayPlan.emoji || '📋';
+            document.getElementById('workoutDate').textContent = dayPlan.date;
+        }
+        
+        // Render plan from week_plan (единственный источник истины)
         function renderTodayPlanBlocks() {
             const container = document.getElementById('todayPlanBlocks');
             
@@ -1210,34 +1244,68 @@
                 return;
             }
             
-            const todayPlan = currentState.today_plan;
-            
-            if (!todayPlan || !todayPlan.blocks || todayPlan.blocks.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-center py-4">План на сегодня не найден в current_state.json</p>';
+            const weekPlan = currentState.week_plan;
+            if (!weekPlan || !weekPlan.days) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">week_plan не найден в current_state.json</p>';
                 return;
             }
             
-            console.log('Rendering today plan:', todayPlan.type, todayPlan.blocks.length, 'blocks');
+            const currentDayKey = getCurrentDayKey();
+            const todayKey = dayKeys[new Date().getDay()];
+            const dayPlan = weekPlan.days[currentDayKey];
+            
+            if (!dayPlan || !dayPlan.blocks || dayPlan.blocks.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">План не найден для этого дня</p>';
+                return;
+            }
+            
+            console.log('Rendering plan for:', currentDayKey, dayPlan.type);
+            
+            // Week day selector
+            const daySelectorHtml = `
+                <div class="mb-4 flex flex-wrap gap-2">
+                    ${Object.keys(weekPlan.days).map(dayKey => {
+                        const day = weekPlan.days[dayKey];
+                        const isSelected = dayKey === currentDayKey;
+                        const isToday = dayKey === todayKey;
+                        return `
+                            <button onclick="selectDay('${dayKey}')" 
+                                class="flex flex-col items-center px-3 py-2 rounded-xl text-sm transition-all
+                                    ${isSelected ? 'bg-purple-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}
+                                    ${isToday && !isSelected ? 'ring-2 ring-purple-400' : ''}">
+                                <span class="font-medium">${dayLabels[dayKey]}</span>
+                                <span class="text-lg">${day.emoji}</span>
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+                ${currentDayKey !== todayKey ? `
+                    <div class="mb-3 p-2 bg-yellow-50 rounded-lg text-sm text-yellow-700">
+                        ⚠️ Просмотр плана на другой день. <button onclick="selectDay(null)" class="underline">Вернуться к сегодня</button>
+                    </div>
+                ` : ''}
+            `;
             
             // Header with plan info
             const headerHtml = `
                 <div class="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
                     <div class="flex items-center gap-3 mb-2">
-                        <span class="text-3xl">${todayPlan.emoji || '📋'}</span>
+                        <span class="text-3xl">${dayPlan.emoji || '📋'}</span>
                         <div>
-                            <h3 class="font-bold text-lg text-gray-800">${todayPlan.type}</h3>
+                            <h3 class="font-bold text-lg text-gray-800">${dayPlan.type}</h3>
                             <p class="text-sm text-gray-600">
-                                ${todayPlan.duration_min} мин • RPE ${todayPlan.target_rpe} • ${todayPlan.location || 'скалодром'}
+                                ${dayPlan.duration_min} мин • RPE ${dayPlan.target_rpe} • ${dayPlan.location || 'скалодром'}
                             </p>
                         </div>
                     </div>
-                    ${todayPlan.key_focus ? `<p class="text-sm text-blue-700 mt-2">🎯 <strong>Фокус:</strong> ${todayPlan.key_focus}</p>` : ''}
+                    ${dayPlan.key_focus ? `<p class="text-sm text-blue-700 mt-2">🎯 <strong>Фокус:</strong> ${dayPlan.key_focus}</p>` : ''}
+                    ${dayPlan.notes ? `<p class="text-sm text-gray-500 mt-1">📝 ${dayPlan.notes}</p>` : ''}
                 </div>
             `;
             
-            // Build plan blocks from current_state.json (preserve done/notes if already set)
+            // Build plan blocks (preserve done/notes if already set for this day)
             if (planBlocks.length === 0) {
-                planBlocks = todayPlan.blocks.map((block, idx) => ({
+                planBlocks = dayPlan.blocks.map((block, idx) => ({
                     id: (idx + 1).toString(),
                     title: `${block.name} (${block.duration_min} мин)`,
                     content: block.exercises ? block.exercises.join('\n• ') : '',
@@ -1271,14 +1339,14 @@
             `).join('');
             
             // Evening priority reminder
-            const eveningHtml = todayPlan.evening_priority ? `
+            const eveningHtml = dayPlan.evening_priority ? `
                 <div class="mt-4 p-3 bg-purple-50 rounded-xl text-sm">
-                    <span class="text-purple-700">🌙 <strong>Вечер:</strong> ${todayPlan.evening_priority}</span>
+                    <span class="text-purple-700">🌙 <strong>Вечер:</strong> ${dayPlan.evening_priority}</span>
                 </div>
             ` : '';
             
-            // Combine header and blocks
-            container.innerHTML = headerHtml + blocksHtml + eveningHtml;
+            // Combine day selector, header, and blocks
+            container.innerHTML = daySelectorHtml + headerHtml + blocksHtml + eveningHtml;
             
             updatePlanProgress();
         }
@@ -1642,18 +1710,26 @@
             const modal = document.getElementById('planModal');
             const contentEl = document.getElementById('todayPlanContent');
             
-            if (!currentState || !currentState.today_plan) {
+            const weekPlan = currentState?.week_plan;
+            if (!weekPlan?.days) {
                 contentEl.innerHTML = '<p class="text-gray-500">План загружается... Попробуйте ещё раз.</p>';
                 modal.classList.remove('section-hidden');
                 loadMarkdownFiles().then(() => {
-                    if (currentState?.today_plan) {
+                    if (currentState?.week_plan?.days) {
                         loadTodayPlan();
                     }
                 });
                 return;
             }
             
-            const plan = currentState.today_plan;
+            const currentDayKey = getCurrentDayKey();
+            const plan = weekPlan.days[currentDayKey];
+            
+            if (!plan) {
+                contentEl.innerHTML = '<p class="text-gray-500">План не найден для этого дня</p>';
+                modal.classList.remove('section-hidden');
+                return;
+            }
             
             // Render full plan in modal
             let html = `
@@ -1666,6 +1742,7 @@
                         ${plan.duration_min} мин • RPE ${plan.target_rpe} • ${plan.location || 'скалодром'}
                     </p>
                     ${plan.key_focus ? `<p class="text-blue-600 mt-2">🎯 ${plan.key_focus}</p>` : ''}
+                    ${plan.notes ? `<p class="text-gray-500 mt-1 text-sm">📝 ${plan.notes}</p>` : ''}
                 </div>
             `;
             
