@@ -316,12 +316,6 @@
         
         <!-- Workout Section (Active Training) -->
         <section id="section-workout" class="fade-in">
-            <!-- Connection Status -->
-            <div id="connectionStatus" class="mb-4 p-3 rounded-xl text-sm flex items-center gap-2 bg-yellow-50 text-yellow-700">
-                <span class="pulse">⚠️</span>
-                <span>Настройте подключение к GitHub Gist в настройках</span>
-                <button onclick="openSettings()" class="ml-auto btn-secondary text-xs">Настроить</button>
-            </div>
 
             <!-- Today's Workout Header -->
             <div class="card mb-6">
@@ -470,14 +464,17 @@
                     <textarea id="workoutNotes" class="input-field h-24 resize-none" placeholder="Что получилось хорошо? Что было сложно? Технические находки..."></textarea>
                 </div>
                 
-                <div class="flex gap-3">
-                    <button onclick="saveWorkout()" class="btn-success flex-1" id="saveBtn">
-                        💾 Сохранить тренировку
-                    </button>
-                    <button onclick="clearWorkout()" class="btn-danger">
-                        🗑️ Очистить
-                    </button>
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+                    <div class="font-medium mb-1">ℹ️ Интерактивный дневник тренировки</div>
+                    <div class="text-xs text-blue-600">
+                        Эта страница помогает отслеживать выполнение плана во время тренировки.
+                        История загружается из <code class="bg-blue-100 px-1 rounded">progress_log.md</code>
+                    </div>
                 </div>
+                
+                <button onclick="clearWorkout()" class="btn-secondary w-full">
+                    🗑️ Очистить чеклист
+                </button>
             </div>
         </section>
 
@@ -713,7 +710,9 @@
         let trainingPlan = null;
         let nutritionRecovery = null;
         let exercisesLibrary = null;
+        let progressLog = null;
         let exercisesData = {};  // Parsed exercises with anchors
+        let progressSessions = [];  // Parsed training sessions from progress_log.md
         let currentState = null;  // Единственный источник истины для week_plan
         let gistData = { sessions: [] };
 
@@ -753,8 +752,8 @@
             renderTodayPlanBlocks();  // Render plan from current_state.json
             renderDashboard();  // Update dashboard with currentState data
             
-            await loadGistData();
-            updateConnectionStatus();
+            // await loadGistData();  // Disabled: using progress_log.md now
+            // updateConnectionStatus();
             
             // Add default exercises based on day
             setupDefaultExercises();
@@ -829,10 +828,11 @@
         async function loadMarkdownFiles() {
             console.log('Loading files...');
             try {
-                const [planRes, nutritionRes, exercisesRes, stateRes] = await Promise.all([
+                const [planRes, nutritionRes, exercisesRes, progressRes, stateRes] = await Promise.all([
                     fetch('training_plan.md'),
                     fetch('nutrition_recovery.md'),
                     fetch('exercises_library.md'),
+                    fetch('progress_log.md'),
                     fetch('current_state.json')
                 ]);
                 
@@ -856,6 +856,14 @@
                     parseExercisesLibrary();
                 } else {
                     console.error('Failed to load exercises_library.md:', exercisesRes.status);
+                }
+                
+                if (progressRes.ok) {
+                    progressLog = await progressRes.text();
+                    console.log('Progress log loaded, length:', progressLog.length);
+                    parseProgressLog();
+                } else {
+                    console.error('Failed to load progress_log.md:', progressRes.status);
                 }
                 
                 if (stateRes.ok) {
@@ -1068,6 +1076,132 @@
             }
         }
         
+        // ==================== PROGRESS LOG PARSER ====================
+        function parseProgressLog() {
+            if (!progressLog) return;
+            
+            progressSessions = [];
+            const lines = progressLog.split('\n');
+            let currentSession = null;
+            let currentSection = '';
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                
+                // Detect new session (### 📅 or ####)
+                if (line.match(/^###\s*📅/) || line.match(/^####\s+\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+\d{4}/i)) {
+                    // Save previous session
+                    if (currentSession && currentSession.date) {
+                        progressSessions.push(currentSession);
+                    }
+                    
+                    // Parse date from header
+                    let dateStr = '';
+                    let typeStr = '';
+                    
+                    if (line.includes('📅')) {
+                        // Format: ### 📅 СРЕДА, 4 ФЕВРАЛЯ 2026
+                        const match = line.match(/📅\s+([А-Яа-я]+),?\s+(\d{1,2})\s+([А-Яа-я]+)\s+(\d{4})/);
+                        if (match) {
+                            const monthMap = {
+                                'января': '01', 'февраля': '02', 'марта': '03', 'апреля': '04',
+                                'мая': '05', 'июня': '06', 'июля': '07', 'августа': '08',
+                                'сентября': '09', 'октября': '10', 'ноября': '11', 'декабря': '12'
+                            };
+                            const day = match[2].padStart(2, '0');
+                            const month = monthMap[match[3].toLowerCase()];
+                            const year = match[4];
+                            dateStr = `${year}-${month}-${day}`;
+                        }
+                    } else {
+                        // Format: #### 23 января 2026 (Четверг) - ТЕСТИРОВАНИЕ
+                        const match = line.match(/####\s+(\d{1,2})\s+([а-я]+)\s+(\d{4})/i);
+                        if (match) {
+                            const monthMap = {
+                                'января': '01', 'февраля': '02', 'марта': '03', 'апреля': '04',
+                                'мая': '05', 'июня': '06', 'июля': '07', 'августа': '08',
+                                'сентября': '09', 'октября': '10', 'ноября': '11', 'декабря': '12'
+                            };
+                            const day = match[1].padStart(2, '0');
+                            const month = monthMap[match[2].toLowerCase()];
+                            const year = match[3];
+                            dateStr = `${year}-${month}-${day}`;
+                        }
+                        // Extract type from header
+                        const typeMatch = line.match(/-\s+([А-ЯЁ\s]+)$/);
+                        if (typeMatch) {
+                            typeStr = typeMatch[1].trim();
+                        }
+                    }
+                    
+                    currentSession = {
+                        date: dateStr,
+                        type: typeStr,
+                        feeling: '',
+                        sleep: '',
+                        recovery: '',
+                        weight: '',
+                        work: [],
+                        rpe: '',
+                        duration: '',
+                        notes: []
+                    };
+                    currentSection = '';
+                    continue;
+                }
+                
+                if (!currentSession) continue;
+                
+                // Parse session fields
+                if (line.match(/^\*\*План:\*\*/)) {
+                    currentSession.type = line.replace(/^\*\*План:\*\*\s*/, '').trim();
+                } else if (line.match(/^\*\*Выполнено:\*\*/)) {
+                    currentSession.duration = line.replace(/^\*\*Выполнено:\*\*\s*/, '').replace(/✅/g, '').trim();
+                } else if (line.match(/^\*\*RPE:\*\*/)) {
+                    currentSession.rpe = line.replace(/^\*\*RPE:\*\*\s*/, '').trim();
+                } else if (line.match(/^\*\*Место:\*\*/)) {
+                    // skip
+                } else if (line.match(/^\*\*Время:\*\*/)) {
+                    const timeStr = line.replace(/^\*\*Время:\*\*\s*/, '').trim();
+                    if (!currentSession.duration) {
+                        currentSession.duration = timeStr;
+                    }
+                } else if (line.match(/^-\s*\*\*Сон:\*\*/)) {
+                    currentSession.sleep = line.replace(/^-\s*\*\*Сон:\*\*\s*/, '').trim();
+                } else if (line.match(/^\*\*Самочувствие перед треней:\*\*/)) {
+                    currentSession.feeling = line.replace(/^\*\*Самочувствие перед треней:\*\*\s*/, '').trim();
+                } else if (line.match(/^-\s*\*\*Общее состояние:\*\*/)) {
+                    currentSession.feeling = line.replace(/^-\s*\*\*Общее состояние:\*\*\s*/, '').trim();
+                } else if (line.match(/^\*\*Восстановление:\*\*/)) {
+                    currentSession.recovery = line.replace(/^\*\*Восстановление:\*\*\s*/, '').trim();
+                } else if (line.match(/^\*\*Вес:\*\*/)) {
+                    currentSession.weight = line.replace(/^\*\*Вес:\*\*\s*/, '').trim();
+                } else if (line.match(/^####\s+(Состояние|Выполненная работа|Основные ощущения|Что сработало|Действия тренера)/)) {
+                    currentSection = line.replace(/^####\s+/, '').replace(/:$/, '').toLowerCase();
+                } else if (line.match(/^###\s+(Выполненная работа|Ключевые наблюдения|Действия тренера)/)) {
+                    currentSection = line.replace(/^###\s+/, '').replace(/:$/, '').toLowerCase();
+                } else if (currentSection === 'выполненная работа' && line.trim() && !line.startsWith('**')) {
+                    if (line.startsWith('-') || line.startsWith('*') || line.match(/^\d+\./)) {
+                        currentSession.work.push(line.trim());
+                    }
+                } else if ((currentSection === 'основные ощущения' || currentSection === 'что сработало') && line.trim()) {
+                    if (line.startsWith('-') || line.match(/^\d+\./)) {
+                        currentSession.notes.push(line.replace(/^[-*]\s*/, '').replace(/^\d+\.\s*/, '').trim());
+                    }
+                }
+            }
+            
+            // Add last session
+            if (currentSession && currentSession.date) {
+                progressSessions.push(currentSession);
+            }
+            
+            // Sort by date (newest first)
+            progressSessions.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            console.log('Parsed progress sessions:', progressSessions.length);
+        }
+        
         function filterExercises() {
             const searchTerm = document.getElementById('exerciseSearch').value.toLowerCase();
             const categories = document.querySelectorAll('.exercise-category');
@@ -1127,15 +1261,16 @@
                 savedGistId: localStorage.getItem('gist_id')
             });
             
-            updateConnectionStatus();
+            // updateConnectionStatus();  // Disabled: using progress_log.md now
             closeSettings();
             showToast('Настройки сохранены!', 'success');
             
             // Load data from Gist after saving settings
-            if (token && gistId) {
-                await loadGistData();
-                showToast('Данные загружены из Gist', 'success');
-            }
+            // Disabled: using progress_log.md now
+            // if (token && gistId) {
+            //     await loadGistData();
+            //     showToast('Данные загружены из Gist', 'success');
+            // }
         }
 
         function openSettings() {
@@ -1900,102 +2035,61 @@
         function renderHistory() {
             const container = document.getElementById('historyList');
             
-            if (!gistData.sessions || gistData.sessions.length === 0) {
+            if (!progressSessions || progressSessions.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 text-center py-8">Нет сохранённых тренировок</p>';
                 return;
             }
             
-            container.innerHTML = gistData.sessions.map((s, index) => `
-                <div class="p-4 bg-gray-50 rounded-xl">
+            container.innerHTML = progressSessions.map((s, index) => `
+                <div class="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                     <div class="flex justify-between items-start mb-2">
                         <div>
-                            <div class="font-bold text-gray-800">${s.dayType || 'Тренировка'}</div>
+                            <div class="font-bold text-gray-800">${s.type || 'Тренировка'}</div>
                             <div class="text-sm text-gray-500">${formatDate(s.date)}</div>
                         </div>
-                        <div class="flex gap-2 items-center">
-                            ${s.summary?.rpe ? `<span class="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm">RPE ${s.summary.rpe}</span>` : ''}
-                            ${s.summary?.duration ? `<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm">${s.summary.duration} мин</span>` : ''}
-                            <button onclick="deleteSession(${index})" class="ml-2 text-gray-400 hover:text-red-500 p-1" title="Удалить">
-                                🗑️
-                            </button>
+                        <div class="flex gap-2 items-center flex-wrap justify-end">
+                            ${s.rpe ? `<span class="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm">RPE ${s.rpe}</span>` : ''}
+                            ${s.duration ? `<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm">${s.duration}</span>` : ''}
+                            ${s.feeling ? `<span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-sm">🎭 ${s.feeling}</span>` : ''}
                         </div>
                     </div>
                     
-                    <div class="flex flex-wrap gap-2 text-sm text-gray-600 mb-2">
-                        ${s.stats?.planBlocksTotal ? `
-                            <span>📋 План: ${s.stats.planBlocksDone}/${s.stats.planBlocksTotal}</span>
-                        ` : ''}
-                        ${s.stats?.totalProblems ? `
-                            <span>🧗 Проблем: ${s.stats.sentProblems}/${s.stats.totalProblems} (флеш: ${s.stats.flashCount})</span>
-                        ` : ''}
-                    </div>
-                    
-                    ${s.planBlocks?.length ? `
-                        <div class="text-xs text-gray-500 mb-2">
-                            ${s.planBlocks.filter(b => b.done).map(b => `<span class="inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded mr-1 mb-1">✓ ${b.title.substring(0, 20)}</span>`).join('')}
+                    ${s.sleep || s.recovery || s.weight ? `
+                        <div class="flex flex-wrap gap-2 text-xs text-gray-600 mb-2 pb-2 border-b border-gray-200">
+                            ${s.sleep ? `<span>💤 ${s.sleep}</span>` : ''}
+                            ${s.recovery ? `<span>♻️ ${s.recovery}</span>` : ''}
+                            ${s.weight ? `<span>⚖️ ${s.weight}</span>` : ''}
                         </div>
                     ` : ''}
                     
-                    ${s.summary?.notes ? `
-                        <div class="text-sm text-gray-600 bg-white p-2 rounded-lg">
-                            ${s.summary.notes}
+                    ${s.work && s.work.length > 0 ? `
+                        <details class="mb-2">
+                            <summary class="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900 mb-1">
+                                📋 Выполненная работа (${s.work.length} пунктов)
+                            </summary>
+                            <div class="text-xs text-gray-600 bg-white p-2 rounded-lg mt-1 space-y-1">
+                                ${s.work.slice(0, 10).map(w => `<div>${w}</div>`).join('')}
+                                ${s.work.length > 10 ? `<div class="text-gray-400 italic">...и еще ${s.work.length - 10}</div>` : ''}
+                            </div>
+                        </details>
+                    ` : ''}
+                    
+                    ${s.notes && s.notes.length > 0 ? `
+                        <div class="text-sm text-gray-700 bg-green-50 p-2 rounded-lg border border-green-200">
+                            <div class="font-medium text-green-800 mb-1">💡 Ключевые наблюдения:</div>
+                            ${s.notes.slice(0, 3).map(n => `<div class="text-xs">• ${n}</div>`).join('')}
                         </div>
                     ` : ''}
                 </div>
             `).join('');
         }
         
-        async function deleteSession(index) {
-            if (!confirm('Удалить эту тренировку?')) return;
-            
-            const token = localStorage.getItem('github_token');
-            const gistId = localStorage.getItem('gist_id');
-            
-            if (!token || !gistId) {
-                showToast('Нет подключения к Gist', 'error');
-                return;
-            }
-            
-            // Remove from local array
-            gistData.sessions.splice(index, 1);
-            gistData.lastUpdated = new Date().toISOString();
-            
-            try {
-                const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        files: {
-                            'training_data.json': {
-                                content: JSON.stringify(gistData, null, 2)
-                            }
-                        }
-                    })
-                });
-                
-                if (res.ok) {
-                    showToast('Тренировка удалена', 'success');
-                    renderHistory();
-                    renderDashboard();
-                } else {
-                    showToast('Ошибка удаления', 'error');
-                    // Reload data to restore
-                    await loadGistData();
-                    renderHistory();
-                }
-            } catch (e) {
-                showToast('Ошибка сети', 'error');
-                await loadGistData();
-                renderHistory();
-            }
-        }
+        // History is now read-only from progress_log.md
+        // No delete functionality needed
 
         function renderDashboard() {
-            // Update total sessions
-            document.getElementById('totalSessions').textContent = gistData.sessions?.length || 0;
+            // Update total sessions from progress_log.md
+            document.getElementById('totalSessions').textContent = progressSessions?.length || 0;
             
             // Update metrics from currentState if available
             if (currentState) {
@@ -2028,23 +2122,23 @@
                 }
             }
             
-            // Render recent sessions
+            // Render recent sessions from progress_log.md
             const container = document.getElementById('recentSessions');
-            const recent = (gistData.sessions || []).slice(0, 3);
+            const recent = (progressSessions || []).slice(0, 3);
             
             if (recent.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 text-center py-4">Нет тренировок</p>';
             } else {
                 container.innerHTML = recent.map(s => `
-                    <div class="p-3 bg-gray-50 rounded-xl">
+                    <div class="p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                         <div class="flex justify-between items-center">
                             <div>
-                                <div class="font-medium text-gray-800">${s.dayType || 'Тренировка'}</div>
+                                <div class="font-medium text-gray-800">${s.type || 'Тренировка'}</div>
                                 <div class="text-xs text-gray-500">${formatDate(s.date)}</div>
                             </div>
                             <div class="text-right">
-                                <div class="text-sm font-medium text-purple-600">RPE ${s.summary?.rpe || '-'}</div>
-                                <div class="text-xs text-gray-500">${s.stats?.sentProblems || 0} проблем</div>
+                                <div class="text-sm font-medium text-purple-600">RPE ${s.rpe || '-'}</div>
+                                <div class="text-xs text-gray-500">${s.duration || '-'}</div>
                             </div>
                         </div>
                     </div>
@@ -2053,9 +2147,9 @@
         }
 
         async function loadHistory() {
-            await loadGistData();
+            // await loadGistData();  // Disabled: using progress_log.md now
             renderHistory();
-            showToast('История обновлена', 'success');
+            showToast('История загружена из progress_log.md', 'success');
         }
 
         // ==================== PLAN MODAL ====================
