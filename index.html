@@ -711,9 +711,8 @@
         
         let trainingPlan = null;
         let nutritionRecovery = null;
-        let exercisesLibrary = null;
         let progressLog = null;
-        let exercisesData = {};  // Parsed exercises with anchors
+        let exercisesData = null;  // Loaded from exercises_library.json
         let progressSessions = [];  // Parsed training sessions from progress_log.md
         let currentState = null;  // Единственный источник истины для week_plan
         let gistData = { sessions: [] };
@@ -833,7 +832,7 @@
                 const [planRes, nutritionRes, exercisesRes, progressRes, stateRes] = await Promise.all([
                     fetch('training_plan.md'),
                     fetch('nutrition_recovery.md'),
-                    fetch('exercises_library.md'),
+                    fetch('exercises_library.json'),
                     fetch('progress_log.md'),
                     fetch('current_state.json')
                 ]);
@@ -853,11 +852,11 @@
                 }
                 
                 if (exercisesRes.ok) {
-                    exercisesLibrary = await exercisesRes.text();
-                    console.log('Exercises library loaded, length:', exercisesLibrary.length);
-                    parseExercisesLibrary();
+                    exercisesData = await exercisesRes.json();
+                    console.log('Exercises library loaded:', exercisesData.categories.length, 'categories');
+                    renderExercisesLibrary();
                 } else {
-                    console.error('Failed to load exercises_library.md:', exercisesRes.status);
+                    console.error('Failed to load exercises_library.json:', exercisesRes.status);
                 }
                 
                 if (progressRes.ok) {
@@ -881,9 +880,10 @@
 
         // ==================== EXERCISES LIBRARY ====================
         function makeExerciseClickable(text) {
-            if (!exercisesData.categories) return text;
+            if (!exercisesData || !exercisesData.categories) return text;
             
             let result = text;
+            const DEBUG = false; // Set to true for debugging
             
             // Build list of all exercise names (sorted by length, longest first)
             const allExercises = [];
@@ -908,46 +908,60 @@
             
             // Extract exercise name from plan text (before colon or dash)
             const textBeforeParams = text.split(/[:–—]/)[0].trim();
+            const textLower = textBeforeParams.toLowerCase();
             
             // Try to find matching exercise
             for (const ex of allExercises) {
+                const exNameLower = ex.name.toLowerCase();
+                const exAltLower = ex.nameAlt.toLowerCase();
+                
+                if (DEBUG && text.toLowerCase().includes('печатная')) {
+                    console.log('Checking:', text, 'against', ex.name);
+                }
+                
                 // Try exact match with original name
-                if (textBeforeParams.toLowerCase().includes(ex.name.toLowerCase())) {
-                    const escapedName = ex.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    const regex = new RegExp(`(${escapedName})`, 'gi');
-                    result = result.replace(regex, 
-                        `<span class="exercise-link text-purple-600 hover:text-purple-800 cursor-pointer underline" onclick="showExerciseDetail('${ex.id}')">$1</span>`
-                    );
-                    break;
-                }
-                // Try match without parentheses
-                else if (ex.nameAlt !== ex.name && textBeforeParams.toLowerCase().includes(ex.nameAlt.toLowerCase())) {
-                    const escapedName = ex.nameAlt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    const regex = new RegExp(`(${escapedName})`, 'gi');
-                    result = result.replace(regex, 
-                        `<span class="exercise-link text-purple-600 hover:text-purple-800 cursor-pointer underline" onclick="showExerciseDetail('${ex.id}')">$1</span>`
-                    );
-                    break;
-                }
-                // Try partial match at the start
-                else if (textBeforeParams.toLowerCase().startsWith(ex.nameAlt.toLowerCase().substring(0, Math.min(10, ex.nameAlt.length)))) {
-                    // Find the actual matching part
-                    const words = ex.nameAlt.split(' ');
-                    let matchedPart = '';
-                    for (let i = words.length; i > 0; i--) {
-                        const testPhrase = words.slice(0, i).join(' ');
-                        if (textBeforeParams.toLowerCase().includes(testPhrase.toLowerCase())) {
-                            matchedPart = testPhrase;
-                            break;
-                        }
+                let nameIndex = textLower.indexOf(exNameLower);
+                if (nameIndex !== -1) {
+                    // Check boundaries: must start at beginning or after space
+                    const beforeOk = nameIndex === 0 || /[\s,;.!?]/.test(textLower[nameIndex - 1]);
+                    // After: must end at string end, or be followed by space/punctuation
+                    const afterIndex = nameIndex + exNameLower.length;
+                    const afterOk = afterIndex >= textLower.length || /[\s,;.!?]/.test(textLower[afterIndex]);
+                    
+                    if (DEBUG && text.toLowerCase().includes('печатная')) {
+                        console.log('  Found at', nameIndex, 'beforeOk:', beforeOk, 'afterOk:', afterOk);
                     }
-                    if (matchedPart.length >= 5) {
-                        const escapedName = matchedPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const regex = new RegExp(`(${escapedName})`, 'gi');
+                    
+                    if (beforeOk && afterOk) {
+                        // Escape the name for regex and create pattern
+                        const pattern = ex.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        // Case-insensitive replacement, but only first occurrence
+                        const regex = new RegExp(`(${pattern})`, 'i');
                         result = result.replace(regex, 
                             `<span class="exercise-link text-purple-600 hover:text-purple-800 cursor-pointer underline" onclick="showExerciseDetail('${ex.id}')">$1</span>`
                         );
+                        if (DEBUG && text.toLowerCase().includes('печатная')) {
+                            console.log('  MATCHED! Result:', result);
+                        }
                         break;
+                    }
+                }
+                // Try match without parentheses
+                else if (ex.nameAlt !== ex.name) {
+                    let altIndex = textLower.indexOf(exAltLower);
+                    if (altIndex !== -1) {
+                        const beforeOk = altIndex === 0 || /[\s,;.!?]/.test(textLower[altIndex - 1]);
+                        const afterIndex = altIndex + exAltLower.length;
+                        const afterOk = afterIndex >= textLower.length || /[\s,;.!?]/.test(textLower[afterIndex]);
+                        
+                        if (beforeOk && afterOk) {
+                            const pattern = ex.nameAlt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            const regex = new RegExp(`(${pattern})`, 'i');
+                            result = result.replace(regex, 
+                                `<span class="exercise-link text-purple-600 hover:text-purple-800 cursor-pointer underline" onclick="showExerciseDetail('${ex.id}')">$1</span>`
+                            );
+                            break;
+                        }
                     }
                 }
             }
@@ -955,67 +969,7 @@
             return result;
         }
         
-        function parseExercisesLibrary() {
-            if (!exercisesLibrary) return;
-            
-            exercisesData = { categories: [] };
-            let currentCategory = null;
-            let currentExercise = null;
-            
-            const lines = exercisesLibrary.split('\n');
-            
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                
-                // Category (## CATEGORY)
-                if (line.match(/^## [А-ЯЁA-Z]/)) {
-                    if (currentExercise && currentCategory) {
-                        currentCategory.exercises.push(currentExercise);
-                    }
-                    currentExercise = null;
-                    
-                    currentCategory = {
-                        name: line.replace(/^## /, '').trim(),
-                        id: line.replace(/^## /, '').toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-'),
-                        exercises: []
-                    };
-                    exercisesData.categories.push(currentCategory);
-                }
-                // Exercise (### Exercise Name)
-                else if (line.startsWith('### ')) {
-                    if (currentExercise && currentCategory) {
-                        currentCategory.exercises.push(currentExercise);
-                    }
-                    
-                    const exerciseName = line.replace(/^### /, '').trim();
-                    currentExercise = {
-                        name: exerciseName,
-                        id: exerciseName.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-'),
-                        content: line + '\n',
-                        description: '',
-                        technique: '',
-                        mistakes: ''
-                    };
-                }
-                // Collect exercise content
-                else if (currentExercise) {
-                    currentExercise.content += line + '\n';
-                    
-                    // Extract key sections
-                    if (line.startsWith('**Описание:**')) {
-                        currentExercise.description = lines[i + 1] || '';
-                    }
-                }
-            }
-            
-            // Add last exercise
-            if (currentExercise && currentCategory) {
-                currentCategory.exercises.push(currentExercise);
-            }
-            
-            console.log('Parsed exercises:', exercisesData.categories.length, 'categories');
-            renderExercisesLibrary();
-        }
+        // parseExercisesLibrary() removed - now loading from JSON directly
         
         function renderExercisesLibrary() {
             const container = document.getElementById('exerciseCategories');
@@ -1066,8 +1020,75 @@
             const contentEl = document.getElementById('exerciseModalContent');
             
             titleEl.textContent = exercise.name;
-            contentEl.innerHTML = marked.parse(exercise.content);
             
+            // Build HTML from JSON structure
+            let html = '';
+            
+            if (exercise.description) {
+                html += `<div class="mb-4"><strong>Описание:</strong><p class="mt-1">${exercise.description}</p></div>`;
+            }
+            
+            if (exercise.technique && exercise.technique.length > 0) {
+                html += `<div class="mb-4"><strong>Техника:</strong><ul class="list-disc ml-5 mt-1">`;
+                exercise.technique.forEach(t => html += `<li>${t}</li>`);
+                html += `</ul></div>`;
+            }
+            
+            if (exercise.accents && exercise.accents.length > 0) {
+                html += `<div class="mb-4"><strong>Акценты:</strong><ul class="list-disc ml-5 mt-1">`;
+                exercise.accents.forEach(a => html += `<li>${a}</li>`);
+                html += `</ul></div>`;
+            }
+            
+            if (exercise.progression && exercise.progression.length > 0) {
+                html += `<div class="mb-4"><strong>Прогрессия:</strong><ul class="list-disc ml-5 mt-1">`;
+                exercise.progression.forEach(p => html += `<li>${p}</li>`);
+                html += `</ul></div>`;
+            }
+            
+            if (exercise.rest) {
+                html += `<div class="mb-4"><strong>Отдых:</strong><p class="mt-1">${exercise.rest}</p></div>`;
+            }
+            
+            if (exercise.mistakes && exercise.mistakes.length > 0) {
+                html += `<div class="mb-4"><strong>Типичные ошибки:</strong><ul class="list-disc ml-5 mt-1">`;
+                exercise.mistakes.forEach(m => html += `<li>${m}</li>`);
+                html += `</ul></div>`;
+            }
+            
+            if (exercise.warnings && exercise.warnings.length > 0) {
+                html += `<div class="mb-4 p-3 bg-red-50 rounded-lg"><strong class="text-red-700">⚠️ Предупреждения:</strong><ul class="list-disc ml-5 mt-1">`;
+                exercise.warnings.forEach(w => html += `<li>${w}</li>`);
+                html += `</ul></div>`;
+            }
+            
+            if (exercise.variations && exercise.variations.length > 0) {
+                html += `<div class="mb-4"><strong>Вариации:</strong><ul class="list-disc ml-5 mt-1">`;
+                exercise.variations.forEach(v => html += `<li>${v}</li>`);
+                html += `</ul></div>`;
+            }
+            
+            if (exercise.notes && exercise.notes.length > 0) {
+                html += `<div class="mb-4 p-3 bg-blue-50 rounded-lg"><strong class="text-blue-700">📝 Примечания:</strong><ul class="list-disc ml-5 mt-1">`;
+                exercise.notes.forEach(n => html += `<li>${n}</li>`);
+                html += `</ul></div>`;
+            }
+            
+            if (exercise.videos && exercise.videos.length > 0) {
+                html += `<div class="mb-4"><strong>📹 Видео:</strong><ul class="list-disc ml-5 mt-1">`;
+                exercise.videos.forEach(v => {
+                    // Parse markdown links
+                    const linkMatch = v.match(/\[([^\]]+)\]\(([^)]+)\)/);
+                    if (linkMatch) {
+                        html += `<li><a href="${linkMatch[2]}" target="_blank" class="text-blue-600 hover:underline">${linkMatch[1]}</a></li>`;
+                    } else {
+                        html += `<li>${v}</li>`;
+                    }
+                });
+                html += `</ul></div>`;
+            }
+            
+            contentEl.innerHTML = html;
             modal.classList.remove('section-hidden');
         }
         
@@ -1686,7 +1707,7 @@
         function renderTodayPlanBlocks() {
             const container = document.getElementById('todayPlanBlocks');
             
-            if (!currentState) {
+            if (!currentState || !exercisesData) {
                 container.innerHTML = '<p class="text-gray-500 text-center py-4">Загрузка плана...</p>';
                 setTimeout(renderTodayPlanBlocks, 500);
                 return;
