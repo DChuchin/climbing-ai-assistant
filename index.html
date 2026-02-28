@@ -305,9 +305,10 @@
             <nav class="flex gap-2 overflow-x-auto pb-2 -mb-2">
                 <button class="nav-btn active" data-section="workout">🏋️ Тренировка</button>
                 <button class="nav-btn" data-section="dashboard">📊 Обзор</button>
+                <button class="nav-btn" data-section="strength">💪 Показатели</button>
                 <button class="nav-btn" data-section="history">📜 История</button>
                 <button class="nav-btn" data-section="plan">📅 План</button>
-                <button class="nav-btn" data-section="exercises">💪 Упражнения</button>
+                <button class="nav-btn" data-section="exercises">📚 Упражнения</button>
                 <button class="nav-btn" data-section="nutrition">🥗 Питание</button>
             </nav>
         </div>
@@ -559,6 +560,48 @@
             </div>
         </section>
 
+        <!-- Strength Metrics Section -->
+        <section id="section-strength" class="section-hidden">
+            <div class="card">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">💪</span>
+                        <h2 class="text-xl font-bold text-gray-800">Силовые показатели</h2>
+                    </div>
+                    <div class="text-xs text-gray-500" id="strengthLastUpdated">Загрузка...</div>
+                </div>
+                
+                <!-- Key Metrics Summary -->
+                <div class="grid md:grid-cols-4 gap-4 mb-6">
+                    <div class="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
+                        <div class="text-sm text-purple-600 font-medium">Вис 20мм</div>
+                        <div class="text-2xl font-bold text-purple-900" id="metric-hangboard">—</div>
+                        <div class="text-xs text-purple-600 mt-1" id="metric-hangboard-trend">—</div>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
+                        <div class="text-sm text-blue-600 font-medium">Подтягивания</div>
+                        <div class="text-2xl font-bold text-blue-900" id="metric-pullups">—</div>
+                        <div class="text-xs text-blue-600 mt-1" id="metric-pullups-trend">—</div>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
+                        <div class="text-sm text-green-600 font-medium">Блокировки</div>
+                        <div class="text-2xl font-bold text-green-900" id="metric-lockoffs">—</div>
+                        <div class="text-xs text-green-600 mt-1" id="metric-lockoffs-trend">—</div>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl">
+                        <div class="text-sm text-orange-600 font-medium">L-seat</div>
+                        <div class="text-2xl font-bold text-orange-900" id="metric-lseat">—</div>
+                        <div class="text-xs text-orange-600 mt-1" id="metric-lseat-trend">—</div>
+                    </div>
+                </div>
+                
+                <!-- Detailed Metrics -->
+                <div id="strengthMetricsDetails" class="space-y-4">
+                    <p class="text-gray-500 text-center py-8">Загрузка показателей...</p>
+                </div>
+            </div>
+        </section>
+
         <!-- History Section -->
         <section id="section-history" class="section-hidden">
             <div class="card">
@@ -713,6 +756,7 @@
         let nutritionRecovery = null;
         let progressLog = null;
         let exercisesData = null;  // Loaded from exercises_library.json
+        let strengthMetrics = null;  // Loaded from strength_metrics.json
         let progressSessions = [];  // Parsed training sessions from progress_log.md
         let currentState = null;  // Единственный источник истины для week_plan
         let gistData = { sessions: [] };
@@ -829,12 +873,13 @@
         async function loadMarkdownFiles() {
             console.log('Loading files...');
             try {
-                const [planRes, nutritionRes, exercisesRes, progressRes, stateRes] = await Promise.all([
+                const [planRes, nutritionRes, exercisesRes, progressRes, stateRes, strengthRes] = await Promise.all([
                     fetch('training_plan.md'),
                     fetch('nutrition_recovery.md'),
                     fetch('exercises_library.json'),
                     fetch('progress_log.md'),
-                    fetch('current_state.json')
+                    fetch('current_state.json'),
+                    fetch('strength_metrics.json')
                 ]);
                 
                 if (planRes.ok) {
@@ -872,6 +917,14 @@
                     console.log('Current state loaded:', currentState?.week_plan ? 'week_plan found' : 'no week_plan');
                 } else {
                     console.error('Failed to load current_state.json:', stateRes.status);
+                }
+                
+                if (strengthRes.ok) {
+                    strengthMetrics = await strengthRes.json();
+                    console.log('Strength metrics loaded:', Object.keys(strengthMetrics.metrics).length, 'metrics');
+                    renderStrengthMetrics();
+                } else {
+                    console.error('Failed to load strength_metrics.json:', strengthRes.status);
                 }
             } catch (e) {
                 console.error('Error loading files:', e);
@@ -2290,6 +2343,220 @@
         // History is now read-only from progress_log.md
         // No delete functionality needed
 
+        // ==================== STRENGTH METRICS ====================
+        function renderStrengthMetrics() {
+            if (!strengthMetrics) return;
+            
+            // Update last updated date
+            document.getElementById('strengthLastUpdated').textContent = 
+                `Обновлено: ${formatDate(strengthMetrics.last_updated)}`;
+            
+            // Update summary cards
+            const hangboard = strengthMetrics.metrics.hangboard_20mm;
+            if (hangboard && hangboard.history.length > 0) {
+                const latest = hangboard.history[hangboard.history.length - 1];
+                document.getElementById('metric-hangboard').textContent = 
+                    latest.max_hang_seconds ? `${latest.max_hang_seconds} сек` : (latest.working_sets || '—');
+                
+                // Calculate trend
+                if (hangboard.history.length > 1) {
+                    const prev = hangboard.history[hangboard.history.length - 2];
+                    const change = (latest.max_hang_seconds || 0) - (prev.max_hang_seconds || 0);
+                    if (change > 0) {
+                        document.getElementById('metric-hangboard-trend').innerHTML = `<span class="text-green-600">↑ +${change} сек</span>`;
+                    } else if (change < 0) {
+                        document.getElementById('metric-hangboard-trend').innerHTML = `<span class="text-red-600">↓ ${change} сек</span>`;
+                    } else {
+                        document.getElementById('metric-hangboard-trend').textContent = 'Стабильно';
+                    }
+                }
+            }
+            
+            const pullups = strengthMetrics.metrics.pullups_weighted;
+            if (pullups && pullups.history.length > 0) {
+                const latest = pullups.history[pullups.history.length - 1];
+                document.getElementById('metric-pullups').textContent = 
+                    latest.working_weight ? `+${latest.working_weight}кг` : (latest.max_weight_x1 ? `+${latest.max_weight_x1}кг` : '—');
+                
+                if (pullups.history.length > 1) {
+                    const prev = pullups.history[pullups.history.length - 2];
+                    const change = (latest.working_weight || 0) - (prev.working_weight || 0);
+                    if (change > 0) {
+                        document.getElementById('metric-pullups-trend').innerHTML = `<span class="text-green-600">↑ +${change}кг</span>`;
+                    } else {
+                        document.getElementById('metric-pullups-trend').textContent = 'Стабильно';
+                    }
+                }
+            }
+            
+            const lockoffs = strengthMetrics.metrics.lockoffs;
+            if (lockoffs && lockoffs.history.length > 0) {
+                const latest = lockoffs.history[lockoffs.history.length - 1];
+                document.getElementById('metric-lockoffs').textContent = latest.result || '—';
+                
+                if (lockoffs.history.length > 1) {
+                    const latestTime = parseInt(latest.result.match(/(\d+)\s*сек/)?.[1] || 0);
+                    const prevTime = parseInt(lockoffs.history[lockoffs.history.length - 2].result.match(/(\d+)\s*сек/)?.[1] || 0);
+                    const change = latestTime - prevTime;
+                    if (change > 0) {
+                        document.getElementById('metric-lockoffs-trend').innerHTML = `<span class="text-green-600">↑ +${change} сек</span>`;
+                    } else {
+                        document.getElementById('metric-lockoffs-trend').textContent = 'Стабильно';
+                    }
+                }
+            }
+            
+            const lseat = strengthMetrics.metrics.l_seat;
+            if (lseat && lseat.history.length > 0) {
+                const latest = lseat.history[lseat.history.length - 1];
+                document.getElementById('metric-lseat').textContent = 
+                    latest.bent_legs ? `${latest.bent_legs} сек` : '—';
+                document.getElementById('metric-lseat-trend').textContent = 
+                    latest.straight_legs ? `Прямые: ${latest.straight_legs} сек` : 'Согнутые';
+            }
+            
+            // Render detailed metrics
+            renderStrengthDetails();
+        }
+        
+        function renderStrengthDetails() {
+            if (!strengthMetrics) return;
+            
+            const container = document.getElementById('strengthMetricsDetails');
+            let html = '';
+            
+            // Primary metrics (detailed tables)
+            const primaryMetrics = ['hangboard_20mm', 'pullups_weighted', 'lockoffs', 'l_seat'];
+            
+            primaryMetrics.forEach(metricKey => {
+                const metric = strengthMetrics.metrics[metricKey];
+                if (!metric || !metric.history || metric.history.length === 0) return;
+                
+                html += `
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                            <span>📈</span>
+                            <span>${metric.name}</span>
+                            ${metric.target ? `<span class="text-xs text-gray-500 ml-auto">Цель: ${metric.target.value}</span>` : ''}
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="text-xs text-gray-600 border-b">
+                                    <tr>
+                                        <th class="text-left py-2 px-2">Дата</th>
+                                        <th class="text-left py-2 px-2">Результат</th>
+                                        <th class="text-left py-2 px-2">Заметки</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-gray-700">
+                                    ${metric.history.slice().reverse().map((entry, idx) => {
+                                        const isLatest = idx === 0;
+                                        let resultText = '';
+                                        
+                                        if (entry.max_hang_seconds) resultText = `${entry.max_hang_seconds} сек`;
+                                        else if (entry.working_sets) resultText = entry.working_sets;
+                                        else if (entry.max_weight_x1) resultText = `Макс: +${entry.max_weight_x1}кг`;
+                                        else if (entry.working_weight) resultText = `Рабочий: +${entry.working_weight}кг`;
+                                        else if (entry.result) resultText = entry.result;
+                                        else if (entry.bent_legs) resultText = `Согнутые: ${entry.bent_legs} сек`;
+                                        
+                                        if (entry.working_weight && entry.working_sets) {
+                                            resultText = `+${entry.working_weight}кг ${entry.working_sets}`;
+                                        }
+                                        if (entry.straight_legs !== undefined) {
+                                            resultText += entry.straight_legs > 0 ? ` | Прямые: ${entry.straight_legs} сек` : ' | Прямые: невозможно';
+                                        }
+                                        
+                                        return `
+                                            <tr class="border-b border-gray-200 ${isLatest ? 'bg-green-50' : ''}">
+                                                <td class="py-2 px-2 font-medium">${formatDate(entry.date)}</td>
+                                                <td class="py-2 px-2 font-mono">${resultText}</td>
+                                                <td class="py-2 px-2 text-xs text-gray-600">${entry.note || ''}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Secondary metrics (compact cards)
+            html += '<div class="grid md:grid-cols-2 gap-4 mt-4">';
+            
+            const secondaryMetrics = ['overhead_press', 'lateral_raises', 'upright_row', 'forearms_curls', 'campus_board', 'typewriter_pullups'];
+            
+            secondaryMetrics.forEach(metricKey => {
+                const metric = strengthMetrics.metrics[metricKey];
+                if (!metric || !metric.history || metric.history.length === 0) return;
+                
+                const latest = metric.history[metric.history.length - 1];
+                
+                html += `
+                    <div class="bg-white border border-gray-200 rounded-xl p-3">
+                        <h4 class="font-medium text-gray-800 text-sm mb-2">${metric.name}</h4>
+                        <div class="text-xs text-gray-600">
+                            <div class="flex justify-between mb-1">
+                                <span>Последняя:</span>
+                                <span class="font-medium text-gray-800">${formatDate(latest.date)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Результат:</span>
+                                <span class="font-mono text-gray-800">${latest.sets || latest.result || '—'}</span>
+                            </div>
+                            ${latest.note ? `<div class="mt-2 text-xs text-gray-500 italic">${latest.note}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            // Climbing metrics
+            if (strengthMetrics.climbing_metrics) {
+                const climbing = strengthMetrics.climbing_metrics;
+                html += `
+                    <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 mt-4">
+                        <h3 class="font-bold text-gray-800 mb-3">🧗 Прогресс в лазании</h3>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <div class="text-sm font-medium text-gray-700 mb-2">Максимальная категория</div>
+                                <div class="flex gap-2 text-sm">
+                                    <span class="px-2 py-1 bg-green-100 text-green-700 rounded">Flash: ${climbing.max_grade?.flash || '?'}</span>
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded">Redpoint: ${climbing.max_grade?.redpoint || '?'}</span>
+                                    <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded">Проект: ${climbing.max_grade?.project || '?'}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-700 mb-2">Флеш-рейт по категориям</div>
+                                <div class="text-xs text-gray-600 space-y-1">
+                                    <div class="flex justify-between"><span>6A:</span><span class="font-medium">${climbing.flash_rates?.grade_6a || '?'}</span></div>
+                                    <div class="flex justify-between"><span>6B:</span><span class="font-medium">${climbing.flash_rates?.grade_6b || '?'}</span></div>
+                                    <div class="flex justify-between"><span>6C:</span><span class="font-medium">${climbing.flash_rates?.grade_6c || '?'}</span></div>
+                                    <div class="flex justify-between"><span>7A:</span><span class="font-medium">${climbing.flash_rates?.grade_7a || '?'}</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Notes
+            if (strengthMetrics.notes && strengthMetrics.notes.length > 0) {
+                html += `
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mt-4">
+                        <h4 class="font-medium text-yellow-800 mb-2">💡 Ключевые наблюдения</h4>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            ${strengthMetrics.notes.map(note => `<li class="flex items-start gap-2"><span>•</span><span>${note}</span></li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+
         function renderDashboard() {
             // Update total sessions from progress_log.md
             document.getElementById('totalSessions').textContent = progressSessions?.length || 0;
@@ -2300,11 +2567,33 @@
                 const cycle = currentState.training_cycle;
                 const recovery = currentState.recovery_status;
                 
-                // Update quick stats
+                // Update quick stats (prefer strengthMetrics if available for more recent data)
                 if (metrics) {
                     document.getElementById('currentGrade').textContent = metrics.grade || '?';
-                    document.getElementById('hangTime').textContent = `${metrics.hangboard_20mm_max_hang_seconds || 0}с`;
-                    document.getElementById('pullupWeight').textContent = `+${metrics.pullups_max_weight_kg || 0}кг`;
+                    
+                    // Use strengthMetrics for more accurate recent data
+                    if (strengthMetrics?.metrics) {
+                        const hangboard = strengthMetrics.metrics.hangboard_20mm;
+                        if (hangboard?.history?.length > 0) {
+                            const latest = hangboard.history[hangboard.history.length - 1];
+                            document.getElementById('hangTime').textContent = 
+                                latest.max_hang_seconds ? `${latest.max_hang_seconds}с` : (metrics.hangboard_20mm_max_hang_seconds || 0) + 'с';
+                        } else {
+                            document.getElementById('hangTime').textContent = `${metrics.hangboard_20mm_max_hang_seconds || 0}с`;
+                        }
+                        
+                        const pullups = strengthMetrics.metrics.pullups_weighted;
+                        if (pullups?.history?.length > 0) {
+                            const latest = pullups.history[pullups.history.length - 1];
+                            document.getElementById('pullupWeight').textContent = 
+                                latest.working_weight ? `+${latest.working_weight}кг` : `+${metrics.pullups_max_weight_kg || 0}кг`;
+                        } else {
+                            document.getElementById('pullupWeight').textContent = `+${metrics.pullups_max_weight_kg || 0}кг`;
+                        }
+                    } else {
+                        document.getElementById('hangTime').textContent = `${metrics.hangboard_20mm_max_hang_seconds || 0}с`;
+                        document.getElementById('pullupWeight').textContent = `+${metrics.pullups_max_weight_kg || 0}кг`;
+                    }
                 }
                 
                 // Update cycle info
