@@ -1162,160 +1162,150 @@
             let currentSection = '';
             
             for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
+                const line = lines[i].trim();
                 
-                // Detect new session (### 📅, ### 🏋️, or ####)
-                // BUT skip sections like "### Неделя X" or "### АНАЛИЗ"
-                const isSession = (line.match(/^###\s*📅/) || 
-                                  line.match(/^###\s*🏋️/) || 
-                                  line.match(/^###\s+[А-ЯЁ]+\s+\d{1,2}\.\d{2}\.\d{4}/i) ||
-                                  line.match(/^####\s+\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+\d{4}/i)) &&
-                                  !line.match(/^###\s+(Неделя|АНАЛИЗ|Графики|ВАЖНЫЕ)/i);
-                
-                if (isSession) {
+                // NEW UNIFIED FORMAT: ## 📅 YYYY-MM-DD | Day | Type
+                if (line.startsWith('## 📅 ')) {
                     // Save previous session
                     if (currentSession && currentSession.date) {
                         progressSessions.push(currentSession);
                     }
                     
-                    // Parse date from header
-                    let dateStr = '';
-                    let typeStr = '';
-                    
-                    if (line.includes('📅')) {
-                        // Format: ### 📅 СРЕДА, 4 ФЕВРАЛЯ 2026
-                        const match = line.match(/📅\s+([А-Яа-я]+),?\s+(\d{1,2})\s+([А-Яа-я]+)\s+(\d{4})/);
-                        if (match) {
-                            const monthMap = {
-                                'января': '01', 'февраля': '02', 'марта': '03', 'апреля': '04',
-                                'мая': '05', 'июня': '06', 'июля': '07', 'августа': '08',
-                                'сентября': '09', 'октября': '10', 'ноября': '11', 'декабря': '12'
-                            };
-                            const day = match[2].padStart(2, '0');
-                            const month = monthMap[match[3].toLowerCase()];
-                            const year = match[4];
-                            dateStr = `${year}-${month}-${day}`;
-                        }
-                    } else if (line.match(/\d{1,2}\.\d{2}\.\d{4}/)) {
-                        // Format: ### 🏋️ ВТОРНИК 10.02.2026 - День 2: ПЛЕЧИ
-                        const match = line.match(/(\d{1,2})\.(\d{2})\.(\d{4})/);
-                        if (match) {
-                            const day = match[1].padStart(2, '0');
-                            const month = match[2];
-                            const year = match[3];
-                            dateStr = `${year}-${month}-${day}`;
-                        }
-                        // Extract type from after dash
-                        const typeMatch = line.match(/-\s+([^-]+?)(?:\s*$|:)/);
-                        if (typeMatch) {
-                            typeStr = typeMatch[1].trim();
-                        }
-                    } else {
-                        // Format: #### 23 января 2026 (Четверг) - ТЕСТИРОВАНИЕ
-                        const match = line.match(/####\s+(\d{1,2})\s+([а-я]+)\s+(\d{4})/i);
-                        if (match) {
-                            const monthMap = {
-                                'января': '01', 'февраля': '02', 'марта': '03', 'апреля': '04',
-                                'мая': '05', 'июня': '06', 'июля': '07', 'августа': '08',
-                                'сентября': '09', 'октября': '10', 'ноября': '11', 'декабря': '12'
-                            };
-                            const day = match[1].padStart(2, '0');
-                            const month = monthMap[match[2].toLowerCase()];
-                            const year = match[3];
-                            dateStr = `${year}-${month}-${day}`;
-                        }
-                        // Extract type from header
-                        const typeMatch = line.match(/-\s+([А-ЯЁ\s]+)$/);
-                        if (typeMatch) {
-                            typeStr = typeMatch[1].trim();
-                        }
+                    // Parse: ## 📅 2026-02-11 | Среда | Техника + Объём
+                    const match = line.match(/## 📅 (\d{4}-\d{2}-\d{2})(?:\s*\|\s*([^\|]+))?(?:\s*\|\s*(.+))?/);
+                    if (match) {
+                        currentSession = {
+                            date: match[1],
+                            day: match[2] ? match[2].trim() : '',
+                            type: match[3] ? match[3].trim() : '',
+                            feeling: '',
+                            sleep: '',
+                            recovery: '',
+                            weight: '',
+                            work: [],
+                            rpe: '',
+                            duration: '',
+                            notes: []
+                        };
+                        currentSection = '';
                     }
-                    
-                    currentSession = {
-                        date: dateStr,
-                        type: typeStr,
-                        feeling: '',
-                        sleep: '',
-                        recovery: '',
-                        weight: '',
-                        work: [],
-                        rpe: '',
-                        duration: '',
-                        notes: []
-                    };
-                    currentSection = '';
                     continue;
                 }
                 
                 if (!currentSession) continue;
                 
-                // Parse session fields
-                if (line.match(/^\*\*План:\*\*/)) {
-                    currentSession.type = line.replace(/^\*\*План:\*\*\s*/, '').trim();
-                } else if (line.match(/^\*\*Выполнено:\*\*/)) {
-                    currentSession.duration = line.replace(/^\*\*Выполнено:\*\*\s*/, '').replace(/✅/g, '').trim();
-                } else if (line.match(/^\*\*RPE:\*\*/)) {
-                    currentSession.rpe = line.replace(/^\*\*RPE:\*\*\s*/, '').trim();
-                } else if (line.match(/^\*\*Место:\*\*/)) {
-                    // skip
-                } else if (line.match(/^\*\*Время:\*\*/)) {
-                    const timeStr = line.replace(/^\*\*Время:\*\*\s*/, '').trim();
-                    if (!currentSession.duration) {
-                        currentSession.duration = timeStr;
+                // Parse fields at the start (before any section)
+                if (!currentSection && line.match(/^\*\*(План|Выполнено|RPE|Место|Время|Локация|Тип):/)) {
+                    if (line.match(/^\*\*RPE:/)) {
+                        currentSession.rpe = line.replace(/^\*\*RPE:\*\*\s*/, '').trim();
+                    } else if (line.match(/^\*\*Время:/)) {
+                        currentSession.duration = line.replace(/^\*\*Время:\*\*\s*/, '').trim();
+                    } else if (line.match(/^\*\*Выполнено:/)) {
+                        const timeMatch = line.match(/(\d+)\s*(мин|минут|часа|час)/i);
+                        if (timeMatch) {
+                            currentSession.duration = timeMatch[0];
+                        }
                     }
-                } else if (line.match(/^-\s*\*\*Сон:\*\*/)) {
-                    currentSession.sleep = line.replace(/^-\s*\*\*Сон:\*\*\s*/, '').trim();
-                } else if (line.match(/^-\s*Сон:/)) {
-                    // New format: - Сон: ?/10
-                    currentSession.sleep = line.replace(/^-\s*Сон:\s*/, '').trim();
-                } else if (line.match(/^\*\*Самочувствие перед треней:\*\*/)) {
-                    currentSession.feeling = line.replace(/^\*\*Самочувствие перед треней:\*\*\s*/, '').trim();
-                } else if (line.match(/^-\s*\*\*Общее состояние:\*\*/)) {
-                    currentSession.feeling = line.replace(/^-\s*\*\*Общее состояние:\*\*\s*/, '').trim();
-                } else if (line.match(/^-\s*(Состояние|Самочувствие):/)) {
-                    // New format: - Состояние: Готов к тренировке
-                    currentSession.feeling = line.replace(/^-\s*(Состояние|Самочувствие):\s*/, '').trim();
-                } else if (line.match(/^\*\*Восстановление:\*\*/)) {
-                    currentSession.recovery = line.replace(/^\*\*Восстановление:\*\*\s*/, '').trim();
-                } else if (line.match(/^-\s*Восстановление:/)) {
-                    // New format: - Восстановление: 6/10
-                    currentSession.recovery = line.replace(/^-\s*Восстановление:\s*/, '').trim();
-                } else if (line.match(/^\*\*Вес:\*\*/)) {
-                    currentSession.weight = line.replace(/^\*\*Вес:\*\*\s*/, '').trim();
-                } else if (line.match(/^-\s*Вес:/)) {
-                    // New format: - Вес: 85.5 кг
-                    currentSession.weight = line.replace(/^-\s*Вес:\s*/, '').trim();
-                } else if (line.match(/^-\s*Время:/)) {
-                    // New format: - Время: 10:25-12:05 (100 мин)
-                    const timeStr = line.replace(/^-\s*Время:\s*/, '').trim();
-                    if (!currentSession.duration) {
-                        currentSession.duration = timeStr;
+                    continue;
+                }
+                
+                // Section headers (support both **, ####, and ### formats)
+                if (line.startsWith('**До тренировки:**') || 
+                    line.match(/^(###|####)\s*(⚙️\s*)?(Параметры тренировки|Параметры|Состояние перед тренировкой|До тренировки)/i)) {
+                    currentSection = 'before';
+                    continue;
+                }
+                if (line.startsWith('**Выполненная работа:**') || 
+                    line.match(/^(###|####)\s*(💪|✅)?\s*(Выполненная работа|Что сделано|Что сделал)/i)) {
+                    currentSection = 'work';
+                    continue;
+                }
+                if (line.startsWith('**Итоги:**') || 
+                    line.match(/^(###|####)\s*(📈|📊)?\s*(Итоги|Основные ощущения)/i)) {
+                    currentSection = 'after';
+                    continue;
+                }
+                if (line.startsWith('**Заметки:**') || 
+                    line.match(/^(###|####)\s*(📝|💭)?\s*(Заметки|Что сработало|План на следующий раз|Заметки и выводы)/i)) {
+                    currentSection = 'notes';
+                    continue;
+                }
+                
+                // Stop at separator
+                if (line === '---') {
+                    continue;
+                }
+                
+                // Parse content based on section
+                if (currentSection === 'before') {
+                    if (line.match(/^-\s*\*?\*?Сон:?\*?\*?/i)) {
+                        currentSession.sleep = line.replace(/^-\s*\*?\*?Сон:?\*?\*?\s*/i, '').trim();
+                    } else if (line.match(/^-\s*\*?\*?(Восстановление|Восстановление до):?\*?\*?/i)) {
+                        currentSession.recovery = line.replace(/^-\s*\*?\*?(Восстановление|Восстановление до):?\*?\*?\s*/i, '').trim();
+                    } else if (line.match(/^-\s*\*?\*?(Состояние|Самочувствие|Общее состояние):?\*?\*?/i)) {
+                        currentSession.feeling = line.replace(/^-\s*\*?\*?(Состояние|Самочувствие|Общее состояние):?\*?\*?\s*/i, '').trim();
+                    } else if (line.match(/^-\s*\*?\*?Вес:?\*?\*?/i)) {
+                        currentSession.weight = line.replace(/^-\s*\*?\*?Вес:?\*?\*?\s*/i, '').trim();
+                    } else if (line.match(/^-\s*\*?\*?Время:?\*?\*?/i)) {
+                        if (!currentSession.duration) {
+                            currentSession.duration = line.replace(/^-\s*\*?\*?Время:?\*?\*?\s*/i, '').trim();
+                        }
+                    } else if (line.match(/^-\s*\*?\*?RPE:?\*?\*?/i) && !currentSession.rpe) {
+                        currentSession.rpe = line.replace(/^-\s*\*?\*?RPE:?\*?\*?\s*/i, '').trim();
                     }
-                } else if (line.match(/^-\s*Длительность:/)) {
-                    // New format: - Длительность: 100 мин
-                    currentSession.duration = line.replace(/^-\s*Длительность:\s*/, '').trim();
-                } else if (line.match(/^-\s*RPE:/)) {
-                    // New format: - RPE: 6/10
-                    currentSession.rpe = line.replace(/^-\s*RPE:\s*/, '').trim();
-                } else if (line.match(/^####\s+(🔥|💪|🎯|Состояние|Выполненная работа|Основные ощущения|Что сработало|Действия тренера)/)) {
-                    currentSection = line.replace(/^####\s+/, '').replace(/^[🔥💪🎯]\s*/, '').replace(/:$/, '').toLowerCase();
-                } else if (line.match(/^###\s+(Выполненная работа|Ключевые наблюдения|Действия тренера|✅\s*АНАЛИЗ)/)) {
-                    currentSection = line.replace(/^###\s+/, '').replace(/^✅\s*/, '').replace(/:$/, '').toLowerCase();
-                } else if (line.match(/^\*\*Фактически выполнено:\*\*/)) {
-                    currentSection = 'выполненная работа';
-                } else if (line.match(/^\*\*Запланировано:\*\*/)) {
-                    currentSection = ''; // Skip planning section
-                } else if (line.match(/^\*\*После тренировки:\*\*/)) {
-                    currentSection = 'после тренировки';
-                } else if (line.match(/^\*\*Что получилось отлично:\*\*/)) {
-                    currentSection = 'что сработало';
-                } else if (currentSection === 'выполненная работа' && line.trim() && !line.startsWith('**') && !line.startsWith('###')) {
-                    if (line.startsWith('-') || line.startsWith('*') || line.match(/^\d+\./)) {
-                        currentSession.work.push(line.trim());
+                } else if (currentSection === 'work' && line && !line.startsWith('**')) {
+                    // Collect work items (skip headers of other sections)
+                    if (!line.match(/^####\s*(Основные ощущения|Что сработало|Заметки|Итоги|План на следующий раз)/i)) {
+                        currentSession.work.push(line);
                     }
-                } else if ((currentSection === 'основные ощущения' || currentSection === 'что сработало' || currentSection === 'анализ тренировки') && line.trim()) {
-                    if (line.startsWith('-') || line.match(/^\d+\./)) {
-                        currentSession.notes.push(line.replace(/^[-*]\s*/, '').replace(/^\d+\.\s*/, '').trim());
+                } else if (currentSection === 'after') {
+                    if (line.match(/^-\s*\*?\*?RPE:?\*?\*?/i)) {
+                        currentSession.rpe = line.replace(/^-\s*\*?\*?RPE:?\*?\*?\s*/i, '').trim();
+                    } else if (line.match(/^-\s*\*?\*?Длительность:?\*?\*?/i)) {
+                        currentSession.duration = line.replace(/^-\s*\*?\*?Длительность:?\*?\*?\s*/i, '').trim();
+                    } else if (line.match(/^-\s*\*?\*?Самочувствие после:?\*?\*?/i)) {
+                        // можно добавить поле если нужно
+                    } else if (line.match(/^\*\*\d+\/10\*\*/)) {
+                        // Format: **8/10** - extract RPE
+                        const rpeMatch = line.match(/(\d+\/10)/);
+                        if (rpeMatch && !currentSession.rpe) {
+                            currentSession.rpe = rpeMatch[1];
+                        }
+                    }
+                } else if (currentSection === 'notes' && line && !line.startsWith('**') && !line.startsWith('---')) {
+                    // Skip section headers
+                    if (!line.match(/^####\s*/)) {
+                        currentSession.notes.push(line);
+                    }
+                }
+                
+                // Extract RPE and duration from JSON blocks or various text formats if not found yet
+                if (!currentSession.rpe) {
+                    // JSON format
+                    if (line.includes('"rpe"')) {
+                        const match = line.match(/"rpe"\s*:\s*(\d+)/);
+                        if (match) {
+                            currentSession.rpe = match[1] + '/10';
+                        }
+                    }
+                    // Text format: "RPE: 8/10" or "ощущения 8/10"
+                    const rpeMatch = line.match(/(?:RPE|ощущения)[:\s]*(\d+\/10)/i);
+                    if (rpeMatch) {
+                        currentSession.rpe = rpeMatch[1];
+                    }
+                }
+                if (!currentSession.duration) {
+                    // JSON format
+                    if (line.includes('"duration_min"')) {
+                        const match = line.match(/"duration_min"\s*:\s*(\d+)/);
+                        if (match) {
+                            currentSession.duration = match[1] + ' мин';
+                        }
+                    }
+                    // Extract duration from text like "90 минут" or "2ч 30 мин"
+                    const durationMatch = line.match(/(\d+\s*(?:ч|час|часа|часов)?\s*\d*\s*(?:мин|минут))/i);
+                    if (durationMatch && (line.includes('Выполнено') || line.includes('Длительность') || line.includes('Время'))) {
+                        currentSession.duration = durationMatch[1];
                     }
                 }
             }
@@ -1329,6 +1319,13 @@
             progressSessions.sort((a, b) => new Date(b.date) - new Date(a.date));
             
             console.log('Parsed progress sessions:', progressSessions.length);
+            console.log('Recent sessions:', progressSessions.slice(0, 5).map(s => ({
+                date: s.date,
+                day: s.day,
+                type: s.type,
+                rpe: s.rpe,
+                duration: s.duration
+            })));
         }
         
         function filterExercises() {
